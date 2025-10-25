@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SlowMA - Slow Looking Art</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header with menu -->
+        <header>
+            <h1>SlowMA</h1>
+            <button class="menu-btn" onclick="toggleMenu()">☰</button>
+        </header>
+
+        <!-- Slide-out menu -->
+        <nav id="menu" class="menu hidden">
+            <button class="close-btn" onclick="toggleMenu()">✕</button>
+            <a href="/">Home</a>
+            <a href="/gallery">Gallery</a>
+            <a href="/profile">Profile</a>
+        </nav>
+
+        <!-- Main content -->
+        <main>
+            <!-- Notifications -->
+            {% if notifications %}
+            <div class="notifications">
+                {% for notif in notifications %}
+                <div class="notification {{ notif.type }}">
+                    <span class="icon">{{ notif.icon }}</span>
+                    <span>{{ notif.message }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Welcome message -->
+            <div class="welcome-section">
+                <h2>Slow down and really see art</h2>
+                <p>Take a mindful journey through an artwork. This isn't about memorizing facts—it's about discovering how to look deeply.</p>
+            </div>
+
+            <!-- Upload section -->
+            <div class="upload-section">
+                <div class="upload-card">
+                    <h3>Start Your Journey</h3>
+                    
+                    <!-- Museum location toggle -->
+                    <div class="location-toggle">
+                        <input type="checkbox" id="atMuseum" name="atMuseum">
+                        <label for="atMuseum">
+                            🏛️ I'm at a museum or gallery
+                        </label>
+                    </div>
+
+                    <!-- File input -->
+                    <input type="file" id="artworkFile" accept="image/*" style="display: none;">
+                    
+                    <button class="upload-btn" onclick="document.getElementById('artworkFile').click()">
+                        📷 Upload Artwork Photo
+                    </button>
+
+                    <!-- Preview -->
+                    <div id="preview" class="preview hidden">
+                        <img id="previewImage" src="" alt="Preview">
+                        <button class="analyze-btn" onclick="analyzeArtwork()">
+                            Begin Slow Looking →
+                        </button>
+                    </div>
+
+                    <!-- Loading -->
+                    <div id="loading" class="loading hidden">
+                        <div class="spinner"></div>
+                        <p>Analyzing artwork...</p>
+                        <p class="loading-subtext">This takes 10-30 seconds</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick stats -->
+            <div class="quick-stats">
+                <div class="stat">
+                    <span class="stat-value">{{ user.journeys_completed or 0 }}</span>
+                    <span class="stat-label">Journeys</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">{{ ((user.total_time_seconds or 0) / 60) | int }}</span>
+                    <span class="stat-label">Minutes</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">{{ user.badges | length }}</span>
+                    <span class="stat-label">Badges</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <script>
+        let uploadedFilepath = null;
+
+        // Handle file selection
+        document.getElementById('artworkFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImage').src = e.target.result;
+                    document.getElementById('preview').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        async function analyzeArtwork() {
+            const fileInput = document.getElementById('artworkFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select an image first');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('preview').classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+
+            try {
+                // Upload file
+                const formData = new FormData();
+                formData.append('artwork', file);
+                formData.append('at_museum', document.getElementById('atMuseum').checked);
+
+                const uploadResponse = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const uploadData = await uploadResponse.json();
+                
+                if (!uploadData.success) {
+                    throw new Error(uploadData.error || 'Upload failed');
+                }
+
+                // Analyze
+                const analyzeResponse = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        filepath: uploadData.filepath,
+                        at_museum: uploadData.at_museum
+                    })
+                });
+
+                const analyzeData = await analyzeResponse.json();
+                
+                if (!analyzeData.success) {
+                    throw new Error(analyzeData.error || 'Analysis failed');
+                }
+
+                // Redirect to walkthrough
+                window.location.href = '/walkthrough/' + analyzeData.journey_id;
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error analyzing artwork: ' + error.message);
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('preview').classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

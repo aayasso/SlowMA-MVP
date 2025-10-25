@@ -1,0 +1,44 @@
+<!-- gallery.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - SlowMA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <button onclick="window.location.href='/'" class="back-btn">← Back</button>
+            <h1>Your Gallery</h1>
+        </header>
+
+        <main>
+            <p class="gallery-count">{{ total }} slow looking journeys</p>
+
+            <div class="gallery-grid">
+                {% for journey in journeys %}
+                <div class="gallery-item" onclick="window.location.href='/gallery/{{ journey.journey_id }}'">
+                    <img src="/uploads/{{ journey.image_filename }}" alt="{{ journey.artwork.title }}">
+                    <div class="gallery-item-info">
+                        <h3>{{ journey.artwork.title or 'Untitled' }}</h3>
+                        <p>{{ journey.artwork.artist or 'Unknown Artist' }}</p>
+                        <p class="journey-date">{{ journey.completed_at[:10] }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if total == 0 %}
+            <div class="empty-state">
+                <p>No journeys yet!</p>
+                <button onclick="window.location.href='/'" class="primary-btn">
+                    Start Your First Journey
+                </button>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+</body>
+</html>

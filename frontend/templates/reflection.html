@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reflection - SlowMA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="reflection-container">
+        <header>
+            <h1>Reflection Time</h1>
+            <p>Let's think about what you discovered</p>
+        </header>
+
+        <main>
+            <form id="reflectionForm">
+                {% for activity in activities %}
+                <div class="activity-card">
+                    <h3>{{ activity.title }}</h3>
+                    <p class="activity-prompt">{{ activity.prompt }}</p>
+                    
+                    <textarea 
+                        name="activity_{{ activity.id }}" 
+                        placeholder="{{ activity.placeholder }}"
+                        rows="6"
+                        required></textarea>
+                </div>
+                {% endfor %}
+
+                <button type="submit" class="primary-btn">
+                    Complete Reflection →
+                </button>
+            </form>
+
+            <div id="feedback" class="feedback hidden">
+                <div class="feedback-content">
+                    <h2 id="feedbackTitle"></h2>
+                    <p id="feedbackMessage"></p>
+                    <div id="stageChange" class="stage-change hidden"></div>
+                    <button class="primary-btn" onclick="window.location.href='/gallery'">
+                        View in Gallery →
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const journeyId = "{{ journey.journey_id }}";
+
+        document.getElementById('reflectionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const responses = {};
+            
+            for (let [key, value] of formData.entries()) {
+                responses[key] = value;
+            }
+
+            // Show loading
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Assessing your responses...';
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch(`/reflection/submit/${journeyId}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({responses})
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showFeedback(result);
+                } else {
+                    alert('Error submitting reflection');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Complete Reflection →';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error submitting reflection');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Complete Reflection →';
+            }
+        });
+
+        function showFeedback(result) {
+            document.getElementById('reflectionForm').style.display = 'none';
+            document.getElementById('feedback').classList.remove('hidden');
+
+            if (result.improvement) {
+                document.getElementById('feedbackTitle').textContent = '🌟 Great progress!';
+            } else if (result.stage_changed) {
+                document.getElementById('feedbackTitle').textContent = '📈 Keep growing!';
+            } else {
+                document.getElementById('feedbackTitle').textContent = '✨ Well done!';
+            }
+
+            document.getElementById('feedbackMessage').textContent = result.assessment.feedback;
+
+            if (result.stage_changed) {
+                document.getElementById('stageChange').classList.remove('hidden');
+                document.getElementById('stageChange').innerHTML = `
+                    <p>You're now at <strong>Stage ${result.new_stage}</strong></p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

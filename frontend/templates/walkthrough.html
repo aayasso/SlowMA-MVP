@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walkthrough - SlowMA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="walkthrough-container">
+        <!-- Progress indicator -->
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+        </div>
+        <div class="progress-text" id="progressText">Step 0 of {{ journey.total_steps }}</div>
+
+        <!-- Welcome screen -->
+        <div id="welcomeScreen" class="screen active">
+            <div class="screen-content">
+                <h1>{{ journey.artwork.title or 'Your Artwork' }}</h1>
+                {% if journey.artwork.artist %}
+                <p class="artist">by {{ journey.artwork.artist }}</p>
+                {% endif %}
+                
+                <div class="welcome-message">
+                    <p>{{ journey.welcome_text }}</p>
+                </div>
+
+                <div class="journey-info">
+                    <div class="info-item">
+                        <span class="icon">📍</span>
+                        <span>{{ journey.total_steps }} observations</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="icon">⏱️</span>
+                        <span>~{{ journey.estimated_duration_minutes }} minutes</span>
+                    </div>
+                </div>
+
+                <button class="primary-btn" onclick="startWalkthrough()">
+                    Begin Journey
+                </button>
+            </div>
+        </div>
+
+        <!-- Look away screens (one for each step) -->
+        {% for step in journey.steps %}
+        <div id="lookAwayScreen{{ step.step_number }}" class="screen look-away-screen">
+            <div class="screen-content">
+                <div class="artwork-blurred">
+                    <img src="/uploads/{{ journey.image_filename }}" alt="Artwork" class="blurred-image">
+                </div>
+
+                <div class="look-away-content">
+                    <h2>Look at the artwork</h2>
+                    <p class="soft-prompt">"{{ step.region.soft_prompt }}"</p>
+                    
+                    <div class="timer" id="timer{{ step.step_number }}">
+                        <div class="timer-circle">
+                            <span class="timer-text" id="timerText{{ step.step_number }}">{{ step.look_away_duration }}</span>
+                        </div>
+                    </div>
+                    
+                    <p class="timer-instruction">Take your time...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reveal screens (one for each step) -->
+        <div id="revealScreen{{ step.step_number }}" class="screen reveal-screen">
+            <div class="screen-content">
+                <div class="artwork-highlight">
+                    <img src="/uploads/{{ journey.image_filename }}" alt="Artwork" class="artwork-image" id="artworkImage{{ step.step_number }}">
+                    <div class="highlight-box" id="highlightBox{{ step.step_number }}" 
+                         style="left: {{ (step.region.x * 100) }}%; 
+                                top: {{ (step.region.y * 100) }}%; 
+                                width: {{ (step.region.width * 100) }}%; 
+                                height: {{ (step.region.height * 100) }}%;">
+                        <span class="step-number-badge">{{ step.step_number }}</span>
+                    </div>
+                </div>
+
+                <div class="observation-content">
+                    <h3>{{ step.region.title }}</h3>
+                    <p class="observation">{{ step.region.observation }}</p>
+                    <p class="why-notable">💡 {{ step.region.why_notable }}</p>
+                    
+                    <button class="primary-btn" onclick="nextStep({{ step.step_number }})">
+                        {% if step.step_number < journey.total_steps %}
+                        Continue →
+                        {% else %}
+                        View Summary →
+                        {% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Final summary screen -->
+        <div id="summaryScreen" class="screen summary-screen">
+            <div class="screen-content">
+                <div class="artwork-full">
+                    <img src="/uploads/{{ journey.image_filename }}" alt="Artwork" class="artwork-image">
+                    {% for step in journey.steps %}
+                    <div class="summary-highlight" 
+                         style="left: {{ (step.region.x * 100) }}%; 
+                                top: {{ (step.region.y * 100) }}%; 
+                                width: {{ (step.region.width * 100) }}%; 
+                                height: {{ (step.region.height * 100) }}%;">
+                        <span class="step-badge">{{ step.step_number }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="summary-content">
+                    <h2>Journey Complete</h2>
+                    
+                    <div class="summary-section">
+                        <h3>🎯 Main Takeaway</h3>
+                        <p>{{ journey.final_summary.main_takeaway }}</p>
+                    </div>
+
+                    <div class="summary-section">
+                        <h3>🔗 Connections</h3>
+                        <p>{{ journey.final_summary.connections }}</p>
+                    </div>
+
+                    <div class="summary-section">
+                        <h3>❓ Reflection</h3>
+                        <p>{{ journey.final_summary.reflection_question }}</p>
+                    </div>
+
+                    <button class="primary-btn" onclick="startReflection()">
+                        Continue to Reflection →
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const journey = {{ journey | tojson }};
+        let currentStep = 0;
+        let stepStartTime = Date.now();
+
+        function startWalkthrough() {
+            hideAllScreens();
+            currentStep = 1;
+            updateProgress();
+            showLookAwayScreen(1);
+        }
+
+        function showLookAwayScreen(stepNum) {
+            document.getElementById('lookAwayScreen' + stepNum).classList.add('active');
+            stepStartTime = Date.now();
+            startTimer(stepNum);
+        }
+
+        function startTimer(stepNum) {
+            const step = journey.steps[stepNum - 1];
+            const duration = step.look_away_duration;
+            let timeLeft = duration;
+
+            const timerElement = document.getElementById('timerText' + stepNum);
+            
+            const interval = setInterval(() => {
+                timeLeft--;
+                timerElement.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    showRevealScreen(stepNum);
+                }
+            }, 1000);
+        }
+
+        async function showRevealScreen(stepNum) {
+            const timeSpent = Math.floor((Date.now() - stepStartTime) / 1000);
+            
+            // Record step completion
+            await fetch(`/walkthrough/step/${journey.journey_id}/${stepNum}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({time_spent: timeSpent})
+            });
+
+            hideAllScreens();
+            document.getElementById('revealScreen' + stepNum).classList.add('active');
+        }
+
+        function nextStep(stepNum) {
+            hideAllScreens();
+            
+            if (stepNum < journey.total_steps) {
+                currentStep = stepNum + 1;
+                updateProgress();
+                showLookAwayScreen(currentStep);
+            } else {
+                showSummary();
+            }
+        }
+
+        function showSummary() {
+            currentStep = journey.total_steps + 1;
+            updateProgress();
+            hideAllScreens();
+            document.getElementById('summaryScreen').classList.add('active');
+        }
+
+        function startReflection() {
+            window.location.href = '/reflection/' + journey.journey_id;
+        }
+
+        function hideAllScreens() {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+        }
+
+        function updateProgress() {
+            const progress = (currentStep / (journey.total_steps + 1)) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('progressText').textContent = 
+                `Step ${currentStep} of ${journey.total_steps}`;
+        }
+    </script>
+</body>
+</html>

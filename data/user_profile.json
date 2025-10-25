@@ -1,0 +1,17 @@
+{
+  "user_id": "ab75efc7-86f7-47e6-a829-0ec2b2faf55f",
+  "created_at": "2025-10-25T09:27:12.035275",
+  "tutorial_completed": false,
+  "housen_stage": 1,
+  "housen_substage": 1,
+  "stage_history": [],
+  "journeys_completed": 0,
+  "total_time_seconds": 0,
+  "museum_visits": 0,
+  "last_activity": null,
+  "recent_quality_scores": [],
+  "badges": [],
+  "achievements": [],
+  "notifications_enabled": true,
+  "location_permission": false
+}
