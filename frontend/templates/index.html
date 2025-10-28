@@ -8,7 +8,7 @@
 </head>
 <body>
     <!-- Constellation background -->
-    <canvas id="constellationCanvas" class="constellation-canvas"></canvas>
+    <canvas id="constellationCanvas" class="constellation-canvas" width="1200" height="800"></canvas>
     
     <div class="app-container translucent">
         <!-- Header with menu -->
@@ -102,18 +102,14 @@
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>
     <script src="{{ url_for('static', filename='constellation.js') }}"></script>
+    
     <script>
-        // Initialize constellation with data from server
-        const constellationData = {{ constellation_data | tojson }};
-        initConstellation(constellationData);
-        
         let uploadedFilepath = null;
 
         // Handle file selection
         document.getElementById('artworkFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
-                // Show preview
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     document.getElementById('previewImage').src = e.target.result;
@@ -132,12 +128,10 @@
                 return;
             }
 
-            // Show loading
             document.getElementById('preview').classList.add('hidden');
             document.getElementById('loading').classList.remove('hidden');
 
             try {
-                // Upload file
                 const formData = new FormData();
                 formData.append('artwork', file);
                 formData.append('at_museum', document.getElementById('atMuseum').checked);
@@ -153,7 +147,6 @@
                     throw new Error(uploadData.error || 'Upload failed');
                 }
 
-                // Analyze
                 const analyzeResponse = await fetch('/analyze', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -169,7 +162,6 @@
                     throw new Error(analyzeData.error || 'Analysis failed');
                 }
 
-                // Redirect to walkthrough
                 window.location.href = '/walkthrough/' + analyzeData.journey_id;
 
             } catch (error) {
@@ -179,6 +171,48 @@
                 document.getElementById('preview').classList.remove('hidden');
             }
         }
+    </script>
+    
+    <script>
+        // Initialize constellation - retry until successful
+        (function() {
+            var data = {{ constellation_data | tojson | safe }};
+            var attempts = 0;
+            var maxAttempts = 50;
+            var constellationInstance = null;
+            
+            function tryInit() {
+                attempts++;
+                var canvas = document.getElementById('constellationCanvas');
+                
+                if (canvas && typeof Constellation !== 'undefined' && !constellationInstance) {
+                    console.log('Initializing constellation on attempt', attempts);
+                    try {
+                        constellationInstance = new Constellation('constellationCanvas', data);
+                        console.log('Constellation initialized successfully');
+                    } catch (e) {
+                        console.error('Error creating constellation:', e);
+                        constellationInstance = null;
+                        if (attempts < maxAttempts) {
+                            setTimeout(tryInit, 100);
+                        }
+                    }
+                } else if (attempts < maxAttempts) {
+                    setTimeout(tryInit, 100);
+                } else {
+                    console.error('Failed to initialize constellation after', attempts, 'attempts');
+                    console.error('Canvas exists:', !!canvas);
+                    console.error('Constellation class exists:', typeof Constellation);
+                }
+            }
+            
+            // Start trying immediately
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', tryInit);
+            } else {
+                tryInit();
+            }
+        })();
     </script>
 </body>
 </html>

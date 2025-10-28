@@ -6,6 +6,11 @@
 class Constellation {
     constructor(canvasId, constellationData) {
         this.canvas = document.getElementById(canvasId);
+        if (!this.canvas) {
+            console.error('Canvas not found:', canvasId);
+            return;
+        }
+        
         this.ctx = this.canvas.getContext('2d');
         this.data = constellationData;
         
@@ -47,7 +52,7 @@ class Constellation {
         };
         
         // Create seed stars (if user has < 10 journeys)
-        if (this.data.journey_count < 10) {
+        if (this.data.journey_count < 10 && this.data.seed_artworks) {
             this.data.seed_artworks.forEach((seed, index) => {
                 const angle = (Math.PI * 2 * index) / this.data.seed_artworks.length;
                 const distance = Math.min(this.canvas.width, this.canvas.height) * 0.25;
@@ -62,33 +67,32 @@ class Constellation {
                     baseSize: 5,
                     size: 5,
                     pulse: Math.random() * Math.PI * 2,
-                    color: '#ffd700', // Gold for seeds
+                    color: '#ffd700',
                     shimmer: Math.random()
                 });
             });
         }
         
         // Create stars for completed journeys
-        this.data.journeys.forEach((journey, index) => {
-            const star = this.createJourneyStar(journey, index);
-            this.stars.push(star);
-        });
-        
-        // Organize stars into constellations
-        this.organizeConstellations();
+        if (this.data.journeys && this.data.journeys.length > 0) {
+            this.data.journeys.forEach((journey, index) => {
+                const star = this.createJourneyStar(journey, index);
+                this.stars.push(star);
+            });
+            
+            // Organize stars into constellations
+            this.organizeConstellations();
+        }
     }
     
     createJourneyStar(journey, index) {
-        // Position based on recency (more recent = closer to center)
         const totalJourneys = this.data.journeys.length;
-        const recency = (totalJourneys - index) / totalJourneys; // 1 = most recent
+        const recency = (totalJourneys - index) / totalJourneys;
         
-        // Base distance from center (recent = closer)
         const minDistance = 60;
         const maxDistance = Math.min(this.canvas.width, this.canvas.height) * 0.4;
         const distance = minDistance + (1 - recency) * (maxDistance - minDistance);
         
-        // Angle based on stage and constellation grouping
         const angle = this.getAngleForStage(journey.stage, index);
         
         return {
@@ -110,7 +114,6 @@ class Constellation {
     }
     
     organizeConstellations() {
-        // Group stars by stage
         const stageGroups = {1: [], 2: [], 3: [], 4: [], 5: []};
         
         this.stars.forEach(star => {
@@ -119,17 +122,15 @@ class Constellation {
             }
         });
         
-        // Arrange each stage group in its own sector
         Object.keys(stageGroups).forEach(stage => {
             const stars = stageGroups[stage];
             const stageAngle = ((stage - 1) * Math.PI * 2) / 5;
-            const spread = Math.PI / 3; // 60 degree spread per stage
+            const spread = Math.PI / 3;
             
             stars.forEach((star, index) => {
                 const offset = (index / stars.length - 0.5) * spread;
                 const angle = stageAngle + offset;
                 
-                // Recalculate position in constellation
                 const minDistance = 60;
                 const maxDistance = Math.min(this.canvas.width, this.canvas.height) * 0.4;
                 const distance = minDistance + (1 - star.recency) * (maxDistance - minDistance);
@@ -141,7 +142,6 @@ class Constellation {
     }
     
     getAngleForStage(stage, index) {
-        // Each stage gets a sector of the circle
         const baseAngle = ((stage - 1) * Math.PI * 2) / 5;
         const jitter = (Math.random() - 0.5) * 0.3;
         return baseAngle + jitter;
@@ -149,17 +149,16 @@ class Constellation {
     
     getStageColor(stage) {
         const colors = {
-            1: '#ff6b6b', // Warm orange-red (Accountive)
-            2: '#4ecdc4', // Blue (Constructive)
-            3: '#9b59b6', // Purple (Classifying)
-            4: '#f39c12', // Gold (Interpretive)
-            5: '#e8f5e9'  // Soft white (Re-creative)
+            1: '#ff6b6b',
+            2: '#4ecdc4',
+            3: '#9b59b6',
+            4: '#f39c12',
+            5: '#e8f5e9'
         };
         return colors[stage] || '#ffffff';
     }
     
     getCompanionColor() {
-        // Color shifts based on user's current stage
         const stage = this.data.current_stage;
         return this.getStageColor(stage);
     }
@@ -167,20 +166,14 @@ class Constellation {
     animate() {
         this.time += 0.01;
         
-        // Clear canvas with twilight gradient
         const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
         gradient.addColorStop(0, '#1a1a2e');
         gradient.addColorStop(1, '#16213e');
         this.ctx.fillStyle = gradient;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Draw companion star
         this.drawCompanionStar();
-        
-        // Draw all stars
         this.stars.forEach(star => this.drawStar(star));
-        
-        // Draw connections between nearby stars
         this.drawConnections();
         
         requestAnimationFrame(() => this.animate());
@@ -188,13 +181,10 @@ class Constellation {
     
     drawCompanionStar() {
         const star = this.companionStar;
-        
-        // Gentle pulse
         star.pulse = this.time;
         const pulseFactor = 1 + Math.sin(star.pulse) * 0.1;
         star.size = star.baseSize * pulseFactor;
         
-        // Glow effect
         const gradient = this.ctx.createRadialGradient(
             star.x, star.y, 0,
             star.x, star.y, star.glow * pulseFactor
@@ -211,7 +201,6 @@ class Constellation {
             star.glow * 2 * pulseFactor
         );
         
-        // Core star
         this.ctx.fillStyle = star.color;
         this.ctx.beginPath();
         this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
@@ -219,17 +208,14 @@ class Constellation {
     }
     
     drawStar(star) {
-        // Gentle pulse
         star.pulse += 0.02;
         const pulseFactor = 1 + Math.sin(star.pulse) * 0.15;
         star.size = star.baseSize * pulseFactor;
         
-        // Shimmer for seed stars
         if (star.type === 'seed') {
             star.shimmer += 0.01;
             const shimmerAlpha = (Math.sin(star.shimmer) + 1) * 0.3 + 0.4;
             
-            // Extra glow
             const gradient = this.ctx.createRadialGradient(
                 star.x, star.y, 0,
                 star.x, star.y, star.size * 3
@@ -247,13 +233,11 @@ class Constellation {
             );
         }
         
-        // Draw star
         this.ctx.fillStyle = star.color;
         this.ctx.beginPath();
         this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
         this.ctx.fill();
         
-        // Smooth movement toward target position (for constellation organization)
         if (star.targetX !== undefined) {
             star.x += (star.targetX - star.x) * 0.02;
             star.y += (star.targetY - star.y) * 0.02;
@@ -261,7 +245,6 @@ class Constellation {
     }
     
     drawConnections() {
-        // Draw subtle lines between stars in same stage
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
         this.ctx.lineWidth = 1;
         
@@ -270,11 +253,9 @@ class Constellation {
                 const star1 = this.stars[i];
                 const star2 = this.stars[j];
                 
-                // Only connect stars of same stage
                 if (star1.stage === star2.stage && star1.type === 'journey' && star2.type === 'journey') {
                     const distance = Math.hypot(star2.x - star1.x, star2.y - star1.y);
                     
-                    // Only draw if close enough
                     if (distance < 100) {
                         this.ctx.beginPath();
                         this.ctx.moveTo(star1.x, star1.y);
@@ -291,16 +272,14 @@ class Constellation {
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
         
-        // Check if clicked on a star
         for (let star of this.stars) {
             const distance = Math.hypot(x - star.x, y - star.y);
-            if (distance < star.size + 10) { // Click tolerance
+            if (distance < star.size + 10) {
                 this.showStarPreview(star);
                 return;
             }
         }
         
-        // Check companion star
         const compDistance = Math.hypot(x - this.companionStar.x, y - this.companionStar.y);
         if (compDistance < this.companionStar.size + 15) {
             this.showCompanionInfo();
@@ -309,11 +288,8 @@ class Constellation {
     
     showStarPreview(star) {
         if (star.type === 'seed') {
-            // Show seed artwork info and suggest starting with it
             alert(`Seed Artwork: ${star.title}\nby ${star.artist}\n\nTap to begin your journey with this artwork.`);
-            // TODO: Trigger upload/journey with this seed artwork
         } else if (star.type === 'journey') {
-            // Redirect to gallery view of this journey
             window.location.href = '/gallery/' + star.id;
         }
     }
@@ -332,7 +308,22 @@ class Constellation {
     }
 }
 
-// Initialize constellation when data is loaded
+// Initialize constellation - called from index.html
 function initConstellation(data) {
-    new Constellation('constellationCanvas', data);
+    // Wait a moment for DOM to fully settle
+    setTimeout(function() {
+        const canvas = document.getElementById('constellationCanvas');
+        if (!canvas) {
+            console.error('Canvas element not found!');
+            return;
+        }
+        
+        if (!data || typeof data.journey_count === 'undefined') {
+            console.error('Invalid constellation data:', data);
+            return;
+        }
+        
+        console.log('Creating constellation with', data.journey_count, 'journeys');
+        new Constellation('constellationCanvas', data);
+    }, 100);
 }
