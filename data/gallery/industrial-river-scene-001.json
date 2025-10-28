@@ -1,0 +1,140 @@
+{
+  "journey_id": "industrial-river-scene-001",
+  "artwork": {
+    "title": null,
+    "artist": "Vince Ornato",
+    "year": null,
+    "period": null,
+    "style": "Industrial Landscape"
+  },
+  "total_steps": 4,
+  "estimated_duration_minutes": 5,
+  "steps": [
+    {
+      "step_number": 1,
+      "region": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 1.0,
+        "height": 1.0,
+        "title": "A Working City at Twilight",
+        "observation": "This feels like a busy industrial city where people work hard - there are tall smokestacks, glowing fires, and a river running through it all.",
+        "why_notable": "The whole scene tells a story of a place that's alive with activity and energy.",
+        "soft_prompt": "What kind of place does this remind you of? What do you think it would feel like to be there?",
+        "concept_tag": "subject"
+      },
+      "look_away_duration": 50,
+      "why_this_sequence": "Starting with the big picture helps them connect emotionally to the scene",
+      "builds_on": null
+    },
+    {
+      "step_number": 2,
+      "region": {
+        "x": 0.3,
+        "y": 0.4,
+        "width": 0.4,
+        "height": 0.4,
+        "title": "Bright Orange Flames",
+        "observation": "See those bright orange and yellow flames shooting up from the industrial buildings? They're like little campfires, but much bigger and more dramatic.",
+        "why_notable": "These fires make the scene feel warm and alive, like the heart of the city is glowing.",
+        "soft_prompt": "Look for the brightest, warmest spots in the picture. What do they remind you of?",
+        "concept_tag": "light"
+      },
+      "look_away_duration": 40,
+      "why_this_sequence": "The flames are emotionally striking and connect to familiar experiences",
+      "builds_on": "These bright spots bring life to the busy industrial story we noticed"
+    },
+    {
+      "step_number": 3,
+      "region": {
+        "x": 0.0,
+        "y": 0.6,
+        "width": 1.0,
+        "height": 0.4,
+        "title": "The Calm River Below",
+        "observation": "Down below all this activity, there's a peaceful river reflecting the city lights like a mirror, with a bridge crossing over it.",
+        "why_notable": "It's like nature providing a quiet pathway through all the busy human activity.",
+        "soft_prompt": "Notice how different the bottom of the picture feels from the top. What's happening down there?",
+        "concept_tag": "composition"
+      },
+      "look_away_duration": 45,
+      "why_this_sequence": "Contrasting calm water with industrial energy creates emotional depth",
+      "builds_on": "This peaceful element balances all that fiery energy we just discovered"
+    },
+    {
+      "step_number": 4,
+      "region": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 1.0,
+        "height": 0.3,
+        "title": "Purple Evening Sky",
+        "observation": "The sky has this beautiful purple and pink glow, like sunset or sunrise, making even this industrial place look magical and dreamy.",
+        "why_notable": "It shows how even the most ordinary working places can be beautiful at the right moment.",
+        "soft_prompt": "Look at the colors in the sky. How do they make this whole scene feel different?",
+        "concept_tag": "color"
+      },
+      "look_away_duration": 35,
+      "why_this_sequence": "Ending with the sky ties together the magical feeling of the whole scene",
+      "builds_on": "This dreamy sky brings together the fiery energy and peaceful water into one beautiful moment"
+    }
+  ],
+  "welcome_text": "Let's explore this fascinating scene together! Take your time and let yourself really soak in what you're seeing. There's so much happening here, and every detail has something to tell us.",
+  "final_summary": {
+    "main_takeaway": "This painting shows how even busy, industrial places can be beautiful and full of life - the artist found magic in an everyday working scene.",
+    "connections": "The bright fires, peaceful river, and dreamy sky all work together to tell a story about a place where people work and live, making it feel both energetic and beautiful.",
+    "invitation_to_return": "Next time you see this, you might notice even more stories hidden in the details. What else might you discover?",
+    "reflection_question": "Does this change how you might look at industrial areas in real life?"
+  },
+  "confidence_score": 0.9,
+  "pedagogical_approach": "Started with emotional connection, used familiar comparisons, built story through contrasting elements, ended with beauty and meaning",
+  "image_filename": "20251026_084559_2B--glory20days.jpg",
+  "created_at": "2025-10-26T08:46:25.473496",
+  "housen_stage": 1,
+  "housen_substage": 1,
+  "image_path": "uploads/20251026_084559_2B--glory20days.jpg",
+  "at_museum": false,
+  "started_at": "2025-10-26T08:46:25.475597",
+  "reflection_activities": [
+    {
+      "id": "activity_1",
+      "type": "connection",
+      "title": "Finding Beauty in Everyday Places",
+      "prompt": "Think of a place you see often that might seem ordinary or even a little ugly at first glance. What could make it beautiful if you looked closer?",
+      "placeholder": "Like a parking lot with interesting shadows...",
+      "why_this_activity": "Assesses ability to transfer the lesson about finding beauty in industrial/everyday settings to personal experience"
+    },
+    {
+      "id": "activity_2",
+      "type": "text",
+      "title": "What Caught Your Eye Most?",
+      "prompt": "What was the most interesting or surprising thing you noticed about this painting? What made it stand out to you?",
+      "placeholder": "The bright fires made me think of...",
+      "why_this_activity": "Reveals observational confidence and ability to articulate personal responses to visual elements"
+    },
+    {
+      "id": "activity_3",
+      "type": "creative",
+      "title": "If You Were There",
+      "prompt": "Imagine you could step into this painting. What sounds might you hear? What would the air feel like? Describe what it would be like to be there.",
+      "placeholder": "I might hear the crackling of fires and feel...",
+      "why_this_activity": "Tests ability to use sensory imagination and engage emotionally with the scene beyond just visual observation"
+    }
+  ],
+  "responses": {
+    "activity_activity_1": "hghghg",
+    "activity_activity_2": "khkjhj",
+    "activity_activity_3": "nbbnbn"
+  },
+  "assessment": {
+    "new_stage": 1,
+    "new_substage": 1,
+    "change": "maintenance",
+    "quality_score": 50.0,
+    "scores": {},
+    "feedback": "You're doing well at your current level. Keep practicing and challenging yourself with new observations."
+  },
+  "completed_at": "2025-10-26T08:56:45.604875",
+  "user_id": "ab75efc7-86f7-47e6-a829-0ec2b2faf55f",
+  "saved_at": "2025-10-26T08:56:45.604921"
+}

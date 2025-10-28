@@ -241,3 +241,39 @@ class DataManager:
         }
         
         return all_badges.get(badge_id, {"name": "Unknown", "icon": "❓", "description": ""})
+    
+    def get_constellation_data(self, user_profile: dict, seed_artworks: list) -> dict:
+        """
+        Get data for constellation visualization
+        
+        Returns:
+            Dictionary with:
+            - current_stage, current_substage
+            - journey_count
+            - seed_artworks (only if < 10 journeys)
+            - journeys (list of completed journeys with positions)
+        """
+        
+        journeys = self.load_gallery(user_profile)
+        journey_count = len(journeys)
+        
+        # Format journey data for constellation
+        journey_data = []
+        for journey in journeys:
+            journey_data.append({
+                "journey_id": journey['journey_id'],
+                "artwork_title": journey['artwork'].get('title', 'Untitled'),
+                "artwork_artist": journey['artwork'].get('artist', 'Unknown'),
+                "stage": journey.get('housen_stage', user_profile['housen_stage']),
+                "substage": journey.get('housen_substage', user_profile['housen_substage']),
+                "completed_at": journey.get('completed_at', ''),
+                "image_filename": journey.get('image_filename', '')
+            })
+        
+        return {
+            "current_stage": user_profile['housen_stage'],
+            "current_substage": user_profile['housen_substage'],
+            "journey_count": journey_count,
+            "seed_artworks": seed_artworks if journey_count < 10 else [],
+            "journeys": journey_data
+        }

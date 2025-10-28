@@ -1,0 +1,140 @@
+{
+  "journey_id": "a7b8c9d0-e1f2-3456-7890-abcdef123456",
+  "artwork": {
+    "title": "Marilyn Diptych",
+    "artist": "Andy Warhol",
+    "year": "1962",
+    "period": "Pop Art",
+    "style": "Screen printing"
+  },
+  "total_steps": 4,
+  "estimated_duration_minutes": 5,
+  "steps": [
+    {
+      "step_number": 1,
+      "region": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 1.0,
+        "height": 1.0,
+        "title": "A Wall of Famous Faces",
+        "observation": "The same woman's face appears over and over, like photos in a photo booth or stamps on a sheet",
+        "why_notable": "It's like seeing someone everywhere at once - familiar yet strange when repeated",
+        "soft_prompt": "What does it feel like to see the same face repeated so many times?",
+        "concept_tag": "composition"
+      },
+      "look_away_duration": 50,
+      "why_this_sequence": "Starting with the immediate impact helps them connect emotionally",
+      "builds_on": null
+    },
+    {
+      "step_number": 2,
+      "region": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 0.5,
+        "height": 1.0,
+        "title": "Bright and Bold Colors",
+        "observation": "The left side bursts with hot pink, electric blue, bright yellow - like a neon sign or candy wrapper",
+        "why_notable": "These colors make her feel alive and glamorous, like a movie star should",
+        "soft_prompt": "How do these bright colors make you feel about this person?",
+        "concept_tag": "color"
+      },
+      "look_away_duration": 40,
+      "why_this_sequence": "Color creates strong emotional response - perfect for Stage 1 connection",
+      "builds_on": "Now focusing on what makes the repetition feel so energetic and eye-catching"
+    },
+    {
+      "step_number": 3,
+      "region": {
+        "x": 0.5,
+        "y": 0.0,
+        "width": 0.5,
+        "height": 1.0,
+        "title": "Fading Into Shadows",
+        "observation": "The right side feels completely different - darker, blurrier, like old newspaper photos or memories fading away",
+        "why_notable": "It's like watching someone disappear or seeing a ghost of the colorful person on the left",
+        "soft_prompt": "What story do you think these two sides are telling together?",
+        "concept_tag": "emotion"
+      },
+      "look_away_duration": 45,
+      "why_this_sequence": "The contrast creates a narrative they can connect to emotionally",
+      "builds_on": "This dramatic difference makes the bright colors from step 2 feel even more important"
+    },
+    {
+      "step_number": 4,
+      "region": {
+        "x": 0.15,
+        "y": 0.2,
+        "width": 0.7,
+        "height": 0.6,
+        "title": "That Unmistakable Smile",
+        "observation": "Her red lips, blonde curls, and beauty mark appear in every single image - sometimes clear, sometimes fuzzy, but always her",
+        "why_notable": "Even when the image gets blurry or dark, you still know exactly who this is",
+        "soft_prompt": "What makes someone so recognizable that we know them even in a faded photo?",
+        "concept_tag": "subject"
+      },
+      "look_away_duration": 35,
+      "why_this_sequence": "Ending with recognition connects to their personal experience with fame and memory",
+      "builds_on": "Ties together the repetition, colors, and fading into a story about someone unforgettable"
+    }
+  ],
+  "welcome_text": "You're looking at the same face repeated 50 times! Let's discover what story these images are telling together, and why this repetition feels so powerful.",
+  "final_summary": {
+    "main_takeaway": "This artwork shows how fame can make someone both everywhere and nowhere at once - bright and alive, yet fading away",
+    "connections": "The bright, colorful repetition on the left celebrates glamour and fame, while the dark, fading right side suggests how quickly that fame can disappear, creating a complete story about celebrity",
+    "invitation_to_return": "Next time, you might notice how each repeated image is slightly different, making this famous face feel both mechanical and human",
+    "reflection_question": "What does it mean to be so famous that your face becomes like a product?"
+  },
+  "confidence_score": 0.9,
+  "pedagogical_approach": "Used emotional storytelling and everyday comparisons to help them see repetition as narrative, building from immediate impact to personal meaning",
+  "image_filename": "20251028_075337_andy-warhol-marilyn.jpg",
+  "created_at": "2025-10-28T07:54:03.813014",
+  "housen_stage": 1,
+  "housen_substage": 1,
+  "image_path": "uploads/20251028_075337_andy-warhol-marilyn.jpg",
+  "at_museum": false,
+  "started_at": "2025-10-28T07:54:03.814212",
+  "reflection_activities": [
+    {
+      "id": "activity_1",
+      "type": "connection",
+      "title": "Fame in Your World",
+      "prompt": "Think about someone famous today - a celebrity, influencer, or public figure. How do you think they might feel seeing their face everywhere, like Marilyn's repeated image?",
+      "placeholder": "Maybe they feel proud, overwhelmed, or...",
+      "why_this_activity": "Assesses personal connection-making and empathy development through relatable contemporary examples"
+    },
+    {
+      "id": "activity_2",
+      "type": "text",
+      "title": "Two Sides of the Story",
+      "prompt": "You noticed how the bright side celebrates fame while the dark side shows it fading. What feelings do these two sides create for you when you look at them?",
+      "placeholder": "The bright side makes me feel... the dark side feels...",
+      "why_this_activity": "Measures emotional response articulation and ability to hold contrasting ideas simultaneously"
+    },
+    {
+      "id": "activity_3",
+      "type": "comparison",
+      "title": "Before and After",
+      "prompt": "If the left side shows Marilyn at the height of her fame, what might her life have been like before fame? How would that compare to what the right side suggests?",
+      "placeholder": "Before fame she might have been... compared to later when...",
+      "why_this_activity": "Tests narrative thinking and ability to infer meaning beyond what's directly visible in the artwork"
+    }
+  ],
+  "responses": {
+    "activity_activity_1": "fkdjkdfj",
+    "activity_activity_2": "qweooqi",
+    "activity_activity_3": "dmnmxnc"
+  },
+  "assessment": {
+    "new_stage": 1,
+    "new_substage": 1,
+    "change": "maintenance",
+    "quality_score": 50.0,
+    "scores": {},
+    "feedback": "You're doing well at your current level. Keep practicing and challenging yourself with new observations."
+  },
+  "completed_at": "2025-10-28T07:58:04.525680",
+  "user_id": "ab75efc7-86f7-47e6-a829-0ec2b2faf55f",
+  "saved_at": "2025-10-28T07:58:04.525719"
+}

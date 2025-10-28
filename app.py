@@ -26,6 +26,13 @@ app.config['SECRET_KEY'] = 'slow-looking-dev-key'
 app.config['UPLOAD_FOLDER'] = Path('uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
+
+# Disable CSP for development
+@app.after_request
+def add_header(response):
+    response.headers['Content-Security-Policy'] = "default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline';"
+    return response
+
 # Create necessary directories
 Path('uploads').mkdir(exist_ok=True)
 Path('data/gallery').mkdir(parents=True, exist_ok=True)
@@ -39,13 +46,46 @@ data_manager = DataManager()
 # Load or create user profile
 user_profile = data_manager.load_user_profile()
 
+# Seed artworks (pre-loaded for new users)
+SEED_ARTWORKS = [
+    {
+        "id": "seed_1",
+        "title": "Woman with Red Hair",
+        "artist": "Amadeo Modigliani",
+        "year": "1917"
+    },
+    {
+        "id": "seed_2", 
+        "title": "Skeleton with a Burning Cigarette",
+        "artist": "Vincent van Gogh",
+        "year": "1886"
+    },
+    {
+        "id": "seed_3",
+        "title": "The Beheading of Saint John the Baptist",
+        "artist": "Caravaggio", 
+        "year": "1608"
+    },
+    {
+        "id": "seed_4",
+        "title": "Meditative Rose",
+        "artist": "Salvador Dalí",
+        "year": "1958"
+    }
+]
+
 
 @app.route('/')
 def index():
     """Landing page with upload button"""
+    
+    # Get constellation data
+    constellation_data = data_manager.get_constellation_data(user_profile, SEED_ARTWORKS)
+    
     return render_template('index.html', 
-                         user=user_profile,
-                         notifications=user_assessment.get_notifications(user_profile))
+                         notifications=user_assessment.get_notifications(user_profile),
+                         constellation_data=constellation_data,
+                         user=user_profile)
 
 
 @app.route('/upload', methods=['POST'])
@@ -333,8 +373,27 @@ if __name__ == '__main__':
     print("SlowMA - Slow Looking Art Education App")
     print("="*60)
     print("\nStarting server...")
-    print("Open your browser to: http://localhost:5001")
     print("\nPress Ctrl+C to stop the server")
     print("="*60 + "\n")
+
+    # Determine starting port (env override: PORT or SLOWMA_PORT)
+    start_port = int(os.environ.get('PORT', os.environ.get('SLOWMA_PORT', '5002')))
+    host = os.environ.get('SLOWMA_HOST', '0.0.0.0')
+
+    # Try a small range of ports to avoid "address already in use"
+    max_attempts = 10
+    port = start_port
+    for attempt in range(max_attempts):
+        try:
+            print(f"Attempting to start on http://localhost:{port} (host={host}) …")
+            app.run(host=host, port=port, debug=True)
+            break
+        except OSError as e:
+            message = str(e)
+            in_use = 'Address already in use' in message or 'address already in use' in message
+            if in_use and attempt < max_attempts - 1:
+                print(f"Port {port} in use. Trying {port + 1} …")
+                port += 1
+                continue
+            raise
     
-    app.run(debug=True, port=5001)

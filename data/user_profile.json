@@ -4,12 +4,38 @@
   "tutorial_completed": false,
   "housen_stage": 1,
   "housen_substage": 1,
-  "stage_history": [],
-  "journeys_completed": 0,
-  "total_time_seconds": 0,
+  "stage_history": [
+    {
+      "date": "2025-10-25T09:42:36.649158",
+      "stage": "1.1",
+      "change": "maintenance"
+    },
+    {
+      "date": "2025-10-25T11:34:05.864203",
+      "stage": "1.1",
+      "change": "maintenance"
+    },
+    {
+      "date": "2025-10-26T08:56:45.604828",
+      "stage": "1.1",
+      "change": "maintenance"
+    },
+    {
+      "date": "2025-10-28T07:58:04.525657",
+      "stage": "1.1",
+      "change": "maintenance"
+    }
+  ],
+  "journeys_completed": 4,
+  "total_time_seconds": 665,
   "museum_visits": 0,
-  "last_activity": null,
-  "recent_quality_scores": [],
+  "last_activity": "2025-10-28T07:58:04.525671",
+  "recent_quality_scores": [
+    18.0,
+    19.77777777777778,
+    50.0,
+    50.0
+  ],
   "badges": [],
   "achievements": [],
   "notifications_enabled": true,

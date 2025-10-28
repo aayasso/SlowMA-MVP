@@ -1,0 +1,156 @@
+{
+  "journey_id": "skull-cigarette-001",
+  "artwork": {
+    "title": "Skull of a Skeleton with Burning Cigarette",
+    "artist": "Vincent van Gogh",
+    "year": "1886",
+    "period": "Post-Impressionism",
+    "style": "Realism/Academic Study"
+  },
+  "total_steps": 4,
+  "estimated_duration_minutes": 5,
+  "steps": [
+    {
+      "step_number": 1,
+      "region": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 1.0,
+        "height": 1.0,
+        "title": "First Impression",
+        "observation": "A human skull sits against a dark background, with what looks like a cigarette hanging from its jaw",
+        "why_notable": "This unusual image immediately grabs attention and makes us wonder what story it's telling",
+        "soft_prompt": "What's the first thing that catches your eye? How does this image make you feel?",
+        "concept_tag": "subject"
+      },
+      "look_away_duration": 45,
+      "why_this_sequence": "Starting with overall impression helps them process the striking subject matter",
+      "builds_on": null
+    },
+    {
+      "step_number": 2,
+      "region": {
+        "x": 0.6,
+        "y": 0.4,
+        "width": 0.3,
+        "height": 0.2,
+        "title": "The Cigarette Detail",
+        "observation": "A thin white cigarette is clenched between the skull's teeth, creating an almost humorous contradiction",
+        "why_notable": "This detail transforms a scary skull into something almost playful or ironic",
+        "soft_prompt": "Look closely at what's in the skull's mouth. What does this remind you of?",
+        "concept_tag": "symbolism"
+      },
+      "look_away_duration": 35,
+      "why_this_sequence": "Focusing on this key detail helps them see the artist's sense of humor",
+      "builds_on": "Building on their initial reaction to explore the unexpected elements"
+    },
+    {
+      "step_number": 3,
+      "region": {
+        "x": 0.2,
+        "y": 0.1,
+        "width": 0.6,
+        "height": 0.5,
+        "title": "Light and Shadow",
+        "observation": "The skull glows with warm yellows and creams against the deep black background, like it's lit by candlelight",
+        "why_notable": "This dramatic lighting makes the skull feel alive and three-dimensional rather than flat",
+        "soft_prompt": "Notice how the light hits the skull. Where do you think the light is coming from?",
+        "concept_tag": "light"
+      },
+      "look_away_duration": 40,
+      "why_this_sequence": "Now they can appreciate the technical skill after connecting emotionally",
+      "builds_on": "After noticing the subject and details, they can see how light creates mood"
+    },
+    {
+      "step_number": 4,
+      "region": {
+        "x": 0.1,
+        "y": 0.5,
+        "width": 0.8,
+        "height": 0.5,
+        "title": "The Skeleton's Body",
+        "observation": "Below the skull, you can see the ribcage and other bones, painted with the same careful attention",
+        "why_notable": "This shows the artist studied real anatomy, making this both art and science",
+        "soft_prompt": "What do you think the artist was trying to learn by painting this?",
+        "concept_tag": "technique"
+      },
+      "look_away_duration": 35,
+      "why_this_sequence": "Ending with the full figure helps them understand this as a study, not just a spooky image",
+      "builds_on": "Completing the visual story from skull to full skeleton reveals the artist's purpose"
+    }
+  ],
+  "welcome_text": "You're looking at something both serious and playful. Take your time and let your eyes wander - what story do you think this painting is telling?",
+  "final_summary": {
+    "main_takeaway": "This painting mixes the serious study of human anatomy with a touch of dark humor",
+    "connections": "The glowing skull, the cigarette, and careful bone details work together to show an artist who could be both scientific and playful",
+    "invitation_to_return": "Each time you look, you might notice new details in the shadows or bones",
+    "reflection_question": "What do you think the artist was feeling when they painted this?"
+  },
+  "confidence_score": 0.9,
+  "pedagogical_approach": "Story-based progression from emotional reaction to personal connection, using accessible language and relatable comparisons",
+  "image_filename": "20251025_112626_VG_-_skeleton.jpg",
+  "created_at": "2025-10-25T11:26:48.869965",
+  "housen_stage": 1,
+  "housen_substage": 1,
+  "image_path": "uploads/20251025_112626_VG_-_skeleton.jpg",
+  "at_museum": false,
+  "started_at": "2025-10-25T11:26:48.871515",
+  "reflection_activities": [
+    {
+      "id": "activity_1",
+      "type": "connection",
+      "title": "What Does This Remind You Of?",
+      "prompt": "This painting shows a skeleton smoking a cigarette - something unexpected! What does this combination remind you of from your own life or things you've seen?",
+      "placeholder": "Maybe a movie, a joke, a Halloween decoration...",
+      "why_this_activity": "Assesses ability to make personal connections and comfort with sharing initial impressions"
+    },
+    {
+      "id": "activity_2",
+      "type": "text",
+      "title": "The Artist's Mood",
+      "prompt": "You noticed this painting mixes serious anatomy study with playful humor. If van Gogh was sitting next to you right now, what do you think he'd tell you about his mood when he painted this?",
+      "placeholder": "I think he might have been feeling...",
+      "why_this_activity": "Tests empathy development and ability to connect artistic choices to human emotions"
+    },
+    {
+      "id": "activity_3",
+      "type": "creative",
+      "title": "Your Own Surprising Mix",
+      "prompt": "Van Gogh mixed something serious (skeleton study) with something unexpected (cigarette). Describe or sketch your own surprising combination that would make people look twice.",
+      "placeholder": "What two things don't usually go together?",
+      "why_this_activity": "Encourages creative thinking and tests understanding of artistic concept through personal application"
+    }
+  ],
+  "responses": {
+    "activity_activity_1": "reminds me of Halloween time and also being cozy, smoking some nice weed at home. ",
+    "activity_activity_2": "he would probably say he's also at home, being cozy during halloween time, smoking weed or a cigarette.",
+    "activity_activity_3": "a girl floating in the clouds holding a lot of concrete."
+  },
+  "assessment": {
+    "new_stage": 1,
+    "new_substage": 1,
+    "change": "maintenance",
+    "quality_score": 19.77777777777778,
+    "scores": {
+      "activity_activity_1": {
+        "personal_connection": 45,
+        "emotional_engagement": 0,
+        "storytelling": 30
+      },
+      "activity_activity_2": {
+        "personal_connection": 30,
+        "emotional_engagement": 0,
+        "storytelling": 36
+      },
+      "activity_activity_3": {
+        "personal_connection": 15,
+        "emotional_engagement": 0,
+        "storytelling": 22
+      }
+    },
+    "feedback": "You're doing well at your current level. Keep practicing and challenging yourself with new observations."
+  },
+  "completed_at": "2025-10-25T11:34:05.864238",
+  "user_id": "ab75efc7-86f7-47e6-a829-0ec2b2faf55f",
+  "saved_at": "2025-10-25T11:34:05.864283"
+}

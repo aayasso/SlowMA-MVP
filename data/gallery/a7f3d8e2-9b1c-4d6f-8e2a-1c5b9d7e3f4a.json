@@ -1,0 +1,156 @@
+{
+  "journey_id": "a7f3d8e2-9b1c-4d6f-8e2a-1c5b9d7e3f4a",
+  "artwork": {
+    "title": null,
+    "artist": null,
+    "year": null,
+    "period": null,
+    "style": "Contemporary mixed media"
+  },
+  "total_steps": 4,
+  "estimated_duration_minutes": 4,
+  "steps": [
+    {
+      "step_number": 1,
+      "region": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 1.0,
+        "height": 1.0,
+        "title": "First Impressions",
+        "observation": "This feels like looking into a dark, mysterious space - maybe an old building or underground room with warm light coming through",
+        "why_notable": "Your first gut feeling about what you're seeing is important and valid",
+        "soft_prompt": "What does this space remind you of? A basement, an old building, somewhere else?",
+        "concept_tag": "emotion"
+      },
+      "look_away_duration": 50,
+      "why_this_sequence": "Starting with overall emotional response helps Stage 1 viewers connect personally",
+      "builds_on": null
+    },
+    {
+      "step_number": 2,
+      "region": {
+        "x": 0.1,
+        "y": 0.3,
+        "width": 0.8,
+        "height": 0.5,
+        "title": "The Ghostly Figures",
+        "observation": "See those pale, almost transparent figures in the center? They look like people moving through this dark space",
+        "why_notable": "These mysterious figures make the scene feel alive and a bit spooky",
+        "soft_prompt": "What do you think these pale figures are doing? Are they walking, working, or something else?",
+        "concept_tag": "subject"
+      },
+      "look_away_duration": 45,
+      "why_this_sequence": "After establishing the setting, focus on the human elements that create story",
+      "builds_on": "Now that you've felt the mysterious atmosphere, let's see who's inside this space"
+    },
+    {
+      "step_number": 3,
+      "region": {
+        "x": 0.0,
+        "y": 0.2,
+        "width": 0.3,
+        "height": 0.4,
+        "title": "Windows to the Outside",
+        "observation": "Those bright white rectangles on the left look like windows letting in daylight from outside",
+        "why_notable": "The contrast between dark inside and bright outside makes this feel real and familiar",
+        "soft_prompt": "How does seeing those bright windows change how the dark space feels to you?",
+        "concept_tag": "light"
+      },
+      "look_away_duration": 40,
+      "why_this_sequence": "Light/dark contrast helps them understand the space and adds emotional depth",
+      "builds_on": "The windows help explain why some areas are darker and others have that warm glow"
+    },
+    {
+      "step_number": 4,
+      "region": {
+        "x": 0.2,
+        "y": 0.1,
+        "width": 0.7,
+        "height": 0.8,
+        "title": "The Warm Orange Glow",
+        "observation": "Notice how orange and golden colors seem to float and glow throughout the scene, especially around the figures",
+        "why_notable": "This warm light makes the mysterious space feel less scary and more magical",
+        "soft_prompt": "How do these warm colors make you feel about what's happening here?",
+        "concept_tag": "color"
+      },
+      "look_away_duration": 35,
+      "why_this_sequence": "Ending with color/mood helps synthesize their emotional journey through the piece",
+      "builds_on": "The warm colors tie together the mysterious figures, the dark space, and the outside light into one feeling"
+    }
+  ],
+  "welcome_text": "Let's explore this mysterious scene together. Take your time and trust what you see and feel - there's no right or wrong way to experience this artwork.",
+  "final_summary": {
+    "main_takeaway": "You've discovered a scene that feels both mysterious and familiar - like looking into a secret world where everyday life happens in magical light",
+    "connections": "The bright windows, ghostly figures, dark space, and warm glowing colors all work together to create a feeling that's both spooky and comforting",
+    "invitation_to_return": "Next time you look, you might notice even more details hiding in those shadows and glowing areas",
+    "reflection_question": "What story do you think is happening in this mysterious glowing space?"
+  },
+  "confidence_score": 0.85,
+  "pedagogical_approach": "Emotional entry point leading to concrete observations, building personal narrative connections through accessible visual elements",
+  "image_filename": "20251025_093619_Corey_bonnet_zynka.webp",
+  "created_at": "2025-10-25T09:36:44.810614",
+  "housen_stage": 1,
+  "housen_substage": 1,
+  "image_path": "uploads/20251025_093619_Corey_bonnet_zynka.webp",
+  "at_museum": false,
+  "started_at": "2025-10-25T09:36:44.811177",
+  "reflection_activities": [
+    {
+      "id": "activity_1",
+      "type": "connection",
+      "title": "Your Memory Connection",
+      "prompt": "This glowing, mysterious scene might remind you of a place or moment from your own life. What does it make you think of? Maybe a cozy room at night, or somewhere that felt magical to you?",
+      "placeholder": "It reminds me of my grandmother's kitchen at night...",
+      "why_this_activity": "Assesses ability to make personal connections and express emotional responses to visual elements"
+    },
+    {
+      "id": "activity_2",
+      "type": "text",
+      "title": "The Story Inside",
+      "prompt": "You noticed this feels like looking into a secret world. If you could step inside this glowing space, what do you think you would find happening there? What's the story?",
+      "placeholder": "I think there might be people having dinner by candlelight...",
+      "why_this_activity": "Reveals storytelling ability and willingness to interpret visual clues imaginatively"
+    },
+    {
+      "id": "activity_3",
+      "type": "text",
+      "title": "Feelings and Colors",
+      "prompt": "You found this scene both spooky and comforting at the same time. How do you think the artist used light and dark colors to create those mixed feelings?",
+      "placeholder": "The warm yellow light makes it cozy, but the dark shadows...",
+      "why_this_activity": "Tests emerging awareness of how artistic elements create emotional effects"
+    }
+  ],
+  "responses": {
+    "activity_activity_1": "This is a steel mill scene from Pittsburgh, PA",
+    "activity_activity_2": "These are guys working very hard under tough conditions",
+    "activity_activity_3": "Yellows/oranges give warm feelings whereas they contrast with the dark interior.  The white figures stand out even more in the dark room."
+  },
+  "assessment": {
+    "new_stage": 1,
+    "new_substage": 1,
+    "change": "maintenance",
+    "quality_score": 18.0,
+    "scores": {
+      "activity_activity_1": {
+        "personal_connection": 15,
+        "emotional_engagement": 0,
+        "storytelling": 28
+      },
+      "activity_activity_2": {
+        "personal_connection": 15,
+        "emotional_engagement": 0,
+        "storytelling": 18
+      },
+      "activity_activity_3": {
+        "personal_connection": 30,
+        "emotional_engagement": 12,
+        "storytelling": 44
+      }
+    },
+    "feedback": "You're doing well at your current level. Keep practicing and challenging yourself with new observations."
+  },
+  "completed_at": "2025-10-25T09:42:36.649195",
+  "user_id": "ab75efc7-86f7-47e6-a829-0ec2b2faf55f",
+  "saved_at": "2025-10-25T09:42:36.649250"
+}
