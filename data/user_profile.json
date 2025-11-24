@@ -24,15 +24,21 @@
       "date": "2025-10-28T07:58:04.525657",
       "stage": "1.1",
       "change": "maintenance"
+    },
+    {
+      "date": "2025-10-28T15:19:47.639685",
+      "stage": "1.1",
+      "change": "maintenance"
     }
   ],
-  "journeys_completed": 4,
-  "total_time_seconds": 665,
+  "journeys_completed": 5,
+  "total_time_seconds": 855,
   "museum_visits": 0,
-  "last_activity": "2025-10-28T07:58:04.525671",
+  "last_activity": "2025-10-28T15:19:47.640272",
   "recent_quality_scores": [
     18.0,
     19.77777777777778,
+    50.0,
     50.0,
     50.0
   ],

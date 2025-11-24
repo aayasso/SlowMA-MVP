@@ -120,5 +120,21 @@
       "placeholder": "The face looks thoughtful because...",
       "why_this_activity": "Tests ability to interpret visual cues and provide reasoning, moving toward evidence-based thinking"
     }
-  ]
+  ],
+  "responses": {
+    "activity_activity_1": "dhdhhd",
+    "activity_activity_2": "tiututut",
+    "activity_activity_3": "bnbvnbnb"
+  },
+  "assessment": {
+    "new_stage": 1,
+    "new_substage": 1,
+    "change": "maintenance",
+    "quality_score": 50.0,
+    "scores": {},
+    "feedback": "You're doing well at your current level. Keep practicing and challenging yourself with new observations."
+  },
+  "completed_at": "2025-10-28T15:19:47.640682",
+  "user_id": "ab75efc7-86f7-47e6-a829-0ec2b2faf55f",
+  "saved_at": "2025-10-28T15:19:47.641502"
 }
