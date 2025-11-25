@@ -33,7 +33,6 @@
         <div class="card">
             <h3>Start Your Journey</h3>
             
-            
             <input type="file" id="artwork-input" accept="image/*" style="display: none;">
             <button class="btn-primary" onclick="document.getElementById('artwork-input').click()">
                 🖼️ Upload Artwork Photo
@@ -49,17 +48,17 @@
             </div>
         </div>
         
-<!-- Stats -->
-<div class="stats">
-    <div class="stat-card">
-        <div class="stat-number">{{ user.journeys_completed or 0 }}</div>
-        <div class="stat-label">Journeys</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{ (user.total_time_seconds or 0) // 60 }}</div>
-        <div class="stat-label">Minutes</div>
-    </div>
-</div>
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ user.journeys_completed or 0 }}</div>
+                <div class="stat-label">Journeys</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ (user.total_time_seconds or 0) // 60 }}</div>
+                <div class="stat-label">Minutes</div>
+            </div>
+        </div>
         
         {% if notifications %}
         <div class="notifications">
@@ -72,8 +71,8 @@
         {% endif %}
     </div>
     
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
-    <script src="{{ url_for('static', filename='constellation.js') }}"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=2"></script>
+    <script src="{{ url_for('static', filename='constellation.js') }}?v=6"></script>
     <script>
         var constellationData = {{ constellation_data | tojson | safe }};
         
