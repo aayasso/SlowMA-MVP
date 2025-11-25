@@ -7,212 +7,127 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <!-- Constellation background -->
-    <canvas id="constellationCanvas" class="constellation-canvas" width="1200" height="800"></canvas>
+    <canvas id="constellationCanvas" class="constellation-canvas"></canvas>
     
-    <div class="app-container translucent">
-        <!-- Header with menu -->
+    <div class="container">
         <header>
             <h1>SlowMA</h1>
             <button class="menu-btn" onclick="toggleMenu()">☰</button>
         </header>
-
-        <!-- Slide-out menu -->
-        <nav id="menu" class="menu hidden">
-            <button class="close-btn" onclick="toggleMenu()">✕</button>
-            <a href="/">Home</a>
-            <a href="/gallery">Gallery</a>
+        
+        <div id="menu" class="menu hidden">
             <a href="/profile">Profile</a>
-        </nav>
-
-        <!-- Main content -->
-        <main>
-            <!-- Notifications -->
-            {% if notifications %}
-            <div class="notifications">
-                {% for notif in notifications %}
-                <div class="notification {{ notif.type }}">
-                    <span class="icon">{{ notif.icon }}</span>
-                    <span>{{ notif.message }}</span>
-                </div>
-                {% endfor %}
-            </div>
+            <a href="/gallery">Gallery</a>
+            {% if authenticated %}
+            <a href="#" onclick="signOut(); return false;">Sign Out</a>
+            {% else %}
+            <a href="/signin">Sign In</a>
             {% endif %}
-
-            <!-- Welcome message -->
-            <div class="welcome-section">
-                <h2>Slow down and really see art</h2>
-                <p>Take a mindful journey through an artwork. This isn't about memorizing facts—it's about discovering how to look deeply.</p>
+        </div>
+        
+        <div class="hero">
+            <h2>Slow down. Observe. Connect.</h2>
+            <p>A lifelong companion to establish and develop a relationship with art.</p>
+        </div>
+        
+        <div class="card">
+            <h3>Start Your Journey</h3>
+            
+            
+            <input type="file" id="artwork-input" accept="image/*" style="display: none;">
+            <button class="btn-primary" onclick="document.getElementById('artwork-input').click()">
+                🖼️ Upload Artwork Photo
+            </button>
+            
+            <div id="preview" class="preview hidden">
+                <img id="preview-img" alt="Preview">
             </div>
-
-            <!-- Upload section -->
-            <div class="upload-section">
-                <div class="upload-card">
-                    <h3>Start Your Journey</h3>
-                    
-                    <!-- Museum location toggle -->
-                    <div class="location-toggle">
-                        <input type="checkbox" id="atMuseum" name="atMuseum">
-                        <label for="atMuseum">
-                            🏛️ I'm at a museum or gallery
-                        </label>
-                    </div>
-
-                    <!-- File input -->
-                    <input type="file" id="artworkFile" accept="image/*" style="display: none;">
-                    
-                    <button class="upload-btn" onclick="document.getElementById('artworkFile').click()">
-                        📷 Upload Artwork Photo
-                    </button>
-
-                    <!-- Preview -->
-                    <div id="preview" class="preview hidden">
-                        <img id="previewImage" src="" alt="Preview">
-                        <button class="analyze-btn" onclick="analyzeArtwork()">
-                            Begin Slow Looking →
-                        </button>
-                    </div>
-
-                    <!-- Loading -->
-                    <div id="loading" class="loading hidden">
-                        <div class="spinner"></div>
-                        <p>Analyzing artwork...</p>
-                        <p class="loading-subtext">This takes 10-30 seconds</p>
-                    </div>
-                </div>
+            
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Analyzing your artwork...</p>
             </div>
-
-            <!-- Quick stats -->
-            <div class="quick-stats">
-                <div class="stat">
-                    <span class="stat-value">{{ user.journeys_completed or 0 }}</span>
-                    <span class="stat-label">Journeys</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-value">{{ ((user.total_time_seconds or 0) / 60) | int }}</span>
-                    <span class="stat-label">Minutes</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-value">{{ user.badges | length }}</span>
-                    <span class="stat-label">Badges</span>
-                </div>
-            </div>
-        </main>
+        </div>
+        
+<!-- Stats -->
+<div class="stats">
+    <div class="stat-card">
+        <div class="stat-number">{{ user.journeys_completed or 0 }}</div>
+        <div class="stat-label">Journeys</div>
     </div>
-
+    <div class="stat-card">
+        <div class="stat-number">{{ (user.total_time_seconds or 0) // 60 }}</div>
+        <div class="stat-label">Minutes</div>
+    </div>
+</div>
+        
+        {% if notifications %}
+        <div class="notifications">
+            {% for notification in notifications %}
+            <div class="notification {{ notification.type }}">
+                {{ notification.message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    
     <script src="{{ url_for('static', filename='app.js') }}"></script>
     <script src="{{ url_for('static', filename='constellation.js') }}"></script>
-    
     <script>
-        let uploadedFilepath = null;
-
-        // Handle file selection
-        document.getElementById('artworkFile').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('previewImage').src = e.target.result;
-                    document.getElementById('preview').classList.remove('hidden');
-                };
-                reader.readAsDataURL(file);
+        var constellationData = {{ constellation_data | tojson | safe }};
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, constellation data:', constellationData);
+            if (typeof initConstellation === 'function') {
+                initConstellation(constellationData);
             }
         });
-
-        async function analyzeArtwork() {
-            const fileInput = document.getElementById('artworkFile');
-            const file = fileInput.files[0];
-            
-            if (!file) {
-                alert('Please select an image first');
-                return;
-            }
-
-            document.getElementById('preview').classList.add('hidden');
-            document.getElementById('loading').classList.remove('hidden');
-
-            try {
-                const formData = new FormData();
-                formData.append('artwork', file);
-                formData.append('at_museum', document.getElementById('atMuseum').checked);
-
-                const uploadResponse = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const uploadData = await uploadResponse.json();
-                
-                if (!uploadData.success) {
-                    throw new Error(uploadData.error || 'Upload failed');
-                }
-
-                const analyzeResponse = await fetch('/analyze', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        filepath: uploadData.filepath,
-                        at_museum: uploadData.at_museum
-                    })
-                });
-
-                const analyzeData = await analyzeResponse.json();
-                
-                if (!analyzeData.success) {
-                    throw new Error(analyzeData.error || 'Analysis failed');
-                }
-
-                window.location.href = '/walkthrough/' + analyzeData.journey_id;
-
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error analyzing artwork: ' + error.message);
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('preview').classList.remove('hidden');
-            }
+        
+        function signOut() {
+            fetch('/auth/signout', {method: 'POST'})
+                .then(function(r) { if (r.ok) window.location.href = '/signin'; });
         }
-    </script>
-    
-    <script>
-        // Initialize constellation - retry until successful
-        (function() {
-            var data = {{ constellation_data | tojson | safe }};
-            var attempts = 0;
-            var maxAttempts = 50;
-            var constellationInstance = null;
+        
+        document.getElementById('artwork-input').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
             
-            function tryInit() {
-                attempts++;
-                var canvas = document.getElementById('constellationCanvas');
-                
-                if (canvas && typeof Constellation !== 'undefined' && !constellationInstance) {
-                    console.log('Initializing constellation on attempt', attempts);
-                    try {
-                        constellationInstance = new Constellation('constellationCanvas', data);
-                        console.log('Constellation initialized successfully');
-                    } catch (e) {
-                        console.error('Error creating constellation:', e);
-                        constellationInstance = null;
-                        if (attempts < maxAttempts) {
-                            setTimeout(tryInit, 100);
-                        }
-                    }
-                } else if (attempts < maxAttempts) {
-                    setTimeout(tryInit, 100);
-                } else {
-                    console.error('Failed to initialize constellation after', attempts, 'attempts');
-                    console.error('Canvas exists:', !!canvas);
-                    console.error('Constellation class exists:', typeof Constellation);
-                }
-            }
+            var reader = new FileReader();
+            reader.onload = function(evt) {
+                document.getElementById('preview-img').src = evt.target.result;
+                document.getElementById('preview').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
             
-            // Start trying immediately
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', tryInit);
-            } else {
-                tryInit();
-            }
-        })();
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('preview').classList.add('hidden');
+            
+            var formData = new FormData();
+            formData.append('artwork', file);
+            formData.append('at_museum', false);
+            
+            fetch('/upload', {method: 'POST', body: formData})
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    if (!d.success) throw new Error(d.error);
+                    return fetch('/analyze', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({filepath: d.filepath, at_museum: d.at_museum})
+                    });
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    if (!d.success) throw new Error(d.error);
+                    window.location.href = '/walkthrough/' + d.journey_id;
+                })
+                .catch(function(err) {
+                    alert('Error: ' + err.message);
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('preview').classList.remove('hidden');
+                });
+        });
     </script>
 </body>
 </html>

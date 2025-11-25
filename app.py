@@ -388,7 +388,7 @@ def gallery():
 
 @app.route('/profile')
 def profile():
-    """Display user profile with stats and badges"""
+    """Display user profile with stats"""
     
     # Get authenticated user or use local profile
     user = auth_manager.get_user()
@@ -397,7 +397,6 @@ def profile():
     else:
         user_profile_data = user_profile
     
-    badges = data_manager.get_user_badges(user_profile_data['id'])
     stats = data_manager.get_user_stats(user_profile_data['id'])
     
     # Get stage information
@@ -416,7 +415,6 @@ def profile():
     
     return render_template('profile.html',
                          user=user_profile_data,
-                         badges=badges,
                          stats=stats,
                          stage_info=stage_info)
 
