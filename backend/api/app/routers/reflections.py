@@ -1,6 +1,7 @@
 """
 SlowMA Reflections Router
 Handles reflection activities and assessment after journeys.
+NOW WITH AI-POWERED ACTIVITY GENERATION!
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Header
@@ -14,6 +15,7 @@ from app.models.schemas import (
     ActivityType,
     ProgressionChange
 )
+from app.activity_generator import get_activity_generator
 
 router = APIRouter(prefix="/api/reflections", tags=["Reflections"])
 
@@ -42,104 +44,6 @@ def get_user_from_token(authorization: str) -> dict:
     return user_data
 
 
-def generate_simple_activities(housen_stage: int) -> List[ReflectionActivity]:
-    """
-    Generate simple reflection activities based on user's Housen stage.
-    
-    For MVP, this creates basic activities.
-    Later, this will be AI-generated and personalized.
-    """
-    
-    # Stage 1 (Accountive): Simple, concrete observations
-    if housen_stage == 1:
-        activities = [
-            ReflectionActivity(
-                id="activity_1",
-                type=ActivityType.TEXT,
-                title="What did you see?",
-                prompt="Describe what you noticed in the artwork.",
-                placeholder="I saw colors, shapes, objects...",
-                why_this_activity="This helps you practice detailed observation."
-            ),
-            ReflectionActivity(
-                id="activity_2",
-                type=ActivityType.TEXT,
-                title="Colors and shapes",
-                prompt="What colors or shapes stood out to you?",
-                placeholder="The blue in the corner, the round shape...",
-                why_this_activity="Focusing on elements builds visual literacy."
-            ),
-            ReflectionActivity(
-                id="activity_3",
-                type=ActivityType.TEXT,
-                title="Your feeling",
-                prompt="How did this artwork make you feel?",
-                placeholder="It made me feel calm, excited, curious...",
-                why_this_activity="Connecting emotions to art deepens engagement."
-            )
-        ]
-    
-    # Stage 2 (Constructive): Building interpretations
-    elif housen_stage == 2:
-        activities = [
-            ReflectionActivity(
-                id="activity_1",
-                type=ActivityType.TEXT,
-                title="Tell the story",
-                prompt="What story might this artwork be telling?",
-                placeholder="I think this shows...",
-                why_this_activity="Narrative thinking develops interpretation skills."
-            ),
-            ReflectionActivity(
-                id="activity_2",
-                type=ActivityType.CONNECTION,
-                title="Connect to your life",
-                prompt="Does this remind you of anything from your own experience?",
-                placeholder="This reminds me of...",
-                why_this_activity="Personal connections make art more meaningful."
-            ),
-            ReflectionActivity(
-                id="activity_3",
-                type=ActivityType.TEXT,
-                title="Artist's choices",
-                prompt="Why do you think the artist made these choices?",
-                placeholder="The artist might have wanted to...",
-                why_this_activity="Considering intent builds critical thinking."
-            )
-        ]
-    
-    # Stage 3+ (Classifying and beyond): More analytical
-    else:
-        activities = [
-            ReflectionActivity(
-                id="activity_1",
-                type=ActivityType.TEXT,
-                title="Analyze the composition",
-                prompt="How do the elements work together in this piece?",
-                placeholder="The composition uses...",
-                why_this_activity="Analyzing structure deepens understanding."
-            ),
-            ReflectionActivity(
-                id="activity_2",
-                type=ActivityType.COMPARISON,
-                title="Compare and contrast",
-                prompt="How is this similar to or different from other artworks you've seen?",
-                placeholder="Compared to other works, this...",
-                why_this_activity="Comparison builds analytical frameworks."
-            ),
-            ReflectionActivity(
-                id="activity_3",
-                type=ActivityType.SYNTHESIS,
-                title="Synthesize your thoughts",
-                prompt="What new understanding did you gain from this observation?",
-                placeholder="I now understand that...",
-                why_this_activity="Synthesis consolidates learning."
-            )
-        ]
-    
-    return activities
-
-
 # ============================================================
 # Endpoints
 # ============================================================
@@ -151,10 +55,10 @@ async def get_activities(
     db: Client = Depends(get_supabase)
 ):
     """
-    Get reflection activities for a completed journey.
+    Get AI-generated reflection activities for a completed journey.
     
     This is called after the user finishes the observation walkthrough.
-    Returns 3 activities tailored to their Housen stage.
+    Returns 3 personalized activities tailored to their Housen stage.
     
     Headers:
     - Authorization: Bearer {access_token}
@@ -163,7 +67,7 @@ async def get_activities(
     - journey_id: UUID of the completed journey
     
     Returns:
-    - List of 3 reflection activities
+    - List of 3 AI-generated reflection activities
     """
     try:
         # Verify user
@@ -183,9 +87,19 @@ async def get_activities(
         
         journey = journey_response.data[0]
         housen_stage = journey.get("housen_stage", 1)
+        housen_substage = journey.get("housen_substage", 1)
+        at_museum = journey.get("at_museum", False)
         
-        # Generate activities based on stage
-        activities = generate_simple_activities(housen_stage)
+        # Get activity generator
+        generator = get_activity_generator()
+        
+        # Generate activities using AI
+        activities = generator.generate_activities(
+            housen_stage=housen_stage,
+            housen_substage=housen_substage,
+            at_museum=at_museum,
+            artwork_context=None  # Will add artwork details later
+        )
         
         return ReflectionActivitiesResponse(
             journey_id=journey_id,
@@ -262,9 +176,13 @@ async def submit_reflection(
         # For MVP: Simple assessment logic
         # Later: This will use AI to analyze responses
         
-        # Calculate simple quality score based on response length
+        # Calculate simple quality score based on response length and depth
         total_length = sum(len(response) for response in submission.responses.values())
-        quality_score = min(1.0, total_length / 300)  # 300 chars = perfect score
+        num_responses = len(submission.responses)
+        
+        # Average response length (good = 100+ chars per response)
+        avg_length = total_length / num_responses if num_responses > 0 else 0
+        quality_score = min(1.0, avg_length / 100)
         
         # Simple progression logic for MVP
         # If quality score > 0.7, might progress substage
