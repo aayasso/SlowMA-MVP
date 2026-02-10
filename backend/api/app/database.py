@@ -5,10 +5,12 @@ Supabase client initialization and helper utilities.
 
 import os
 from functools import lru_cache
+from pathlib import Path
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
-load_dotenv()
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 
 class SupabaseClient:
@@ -40,10 +42,6 @@ def get_supabase() -> Client:
     return SupabaseClient.get_client()
 
 
-# ---------------------------------------------------------------------------
-# Auth helpers
-# ---------------------------------------------------------------------------
-
 def get_authenticated_client(access_token: str) -> Client:
     """
     Return a Supabase client scoped to a specific user session.
@@ -65,7 +63,6 @@ def verify_token(access_token: str) -> dict | None:
     """
     try:
         client = get_supabase()
-        # Use the admin auth to verify the token
         user_response = client.auth.get_user(access_token)
         if user_response and user_response.user:
             return {

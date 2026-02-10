@@ -48,3 +48,24 @@ async def health_check():
         "status": "healthy",
         "service": "slowma-backend"
     }
+
+@app.get("/test-db")
+async def test_database():
+    """Test Supabase database connection"""
+    from app.database import get_supabase
+    
+    try:
+        db = get_supabase()
+        # Try to count artworks
+        result = db.table('artworks').select('*', count='exact').execute()
+        
+        return {
+            "status": "success",
+            "artworks_count": result.count,
+            "message": "Database connection working!"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }

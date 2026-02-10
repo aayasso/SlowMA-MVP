@@ -119,7 +119,7 @@ class DataManager:
                 museum_visits += 1
         
         return {
-            'total_journeys': len(journeys),
+            'journeys_completed': len(journeys),
             'total_minutes': total_time // 60,
             'museum_visits': museum_visits
         }

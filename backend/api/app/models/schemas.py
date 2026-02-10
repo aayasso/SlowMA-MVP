@@ -64,7 +64,7 @@ class ProgressionChange(str, Enum):
 class SignUpRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=6)
-    display_name: Optional[str] = None
+    username: Optional[str] = None
 
 
 class SignInRequest(BaseModel):
@@ -98,7 +98,7 @@ class PasswordUpdateRequest(BaseModel):
 # ============================================================
 
 class UserProfileBase(BaseModel):
-    display_name: Optional[str] = None
+    username: Optional[str] = None
     housen_stage: int = Field(default=1, ge=1, le=5)
     housen_substage: int = Field(default=1, ge=1, le=3)
 
@@ -110,7 +110,7 @@ class UserProfileCreate(UserProfileBase):
 
 
 class UserProfileUpdate(BaseModel):
-    display_name: Optional[str] = None
+    username: Optional[str] = None
 
 
 class UserProfileResponse(UserProfileBase):
@@ -119,13 +119,13 @@ class UserProfileResponse(UserProfileBase):
     id: str
     email: str
     is_teacher: bool = False
-    total_journeys: int = 0
+    journeys_completed: int = 0
     created_at: str
     updated_at: str
 
 
 class UserStatsResponse(BaseModel):
-    total_journeys: int = 0
+    journeys_completed: int = 0
     current_stage: int = 1
     current_substage: int = 1
     stage_name: str = "Accountive"

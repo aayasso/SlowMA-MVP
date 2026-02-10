@@ -1,231 +1,375 @@
 """
 SlowMA Journeys Router
-Create, retrieve, and complete slow-looking journeys.
+Handles journey creation, retrieval, and completion.
 """
 
-import json
-import os
-import uuid
+from fastapi import APIRouter, HTTPException, Depends, Header
+from typing import List, Optional
 from datetime import datetime
-from pathlib import Path
-
-from fastapi import APIRouter, Depends, Header, HTTPException, status
-from supabase import Client
-
-from app.database import get_supabase, verify_token
+from app.database import get_supabase, verify_token, Client
 from app.models.schemas import (
-    JourneyCompleteRequest,
     JourneyCreate,
-    JourneyListItem,
     JourneyResponse,
+    JourneyListItem,
+    JourneyCompleteRequest,
+    ArtworkInfo
 )
 
-router = APIRouter(prefix="/journeys", tags=["journeys"])
-
-UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
+router = APIRouter(prefix="/api/journeys", tags=["Journeys"])
 
 
-def _get_current_user(authorization: str = Header(...)) -> dict:
-    token = authorization.replace("Bearer ", "")
-    user = verify_token(token)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
-    return user
+# ============================================================
+# Helper Functions
+# ============================================================
+
+def get_user_from_token(authorization: str) -> dict:
+    """Extract and verify user from authorization header."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authorization header"
+        )
+    
+    access_token = authorization.replace("Bearer ", "")
+    user_data = verify_token(access_token)
+    
+    if not user_data:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token"
+        )
+    
+    return user_data
 
 
-# ---------------------------------------------------------------------------
+# ============================================================
 # Endpoints
-# ---------------------------------------------------------------------------
+# ============================================================
 
-@router.post("", response_model=JourneyResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=JourneyResponse)
 async def create_journey(
-    body: JourneyCreate,
-    user: dict = Depends(_get_current_user),
-    db: Client = Depends(get_supabase),
+    request: JourneyCreate,
+    authorization: str = Header(...),
+    db: Client = Depends(get_supabase)
 ):
     """
-    Generate a new slow-looking journey from an uploaded artwork image.
-    Calls the Anthropic Claude API to analyse the image and produce a
-    step-by-step guided observation sequence tailored to the user's
-    current Housen stage.
+    Create a new journey for an artwork.
+    
+    This is called when:
+    - User taps "Start Journey" on a seed artwork
+    - User uploads their own photo of an artwork
+    
+    For MVP, we'll create a simple journey structure.
+    Later, this will call AI to generate personalized steps.
+    
+    Headers:
+    - Authorization: Bearer {access_token}
+    
+    Request Body:
+    - image_filename: Filename of the artwork
+    - at_museum: Whether user is physically at a museum
+    
+    Returns:
+    - Complete journey with steps and prompts
     """
-    from anthropic import Anthropic
-    import base64
-    import hashlib
-
-    # Fetch user profile for Housen stage
-    profile_result = db.table("user_profiles").select("*").eq("id", user["id"]).execute()
-    if not profile_result.data:
-        raise HTTPException(status_code=404, detail="User profile not found")
-
-    profile = profile_result.data[0]
-    housen_stage = profile.get("housen_stage", 1)
-    housen_substage = profile.get("housen_substage", 1)
-
-    # Locate the image file
-    image_path = UPLOAD_DIR / body.image_filename
-    if not image_path.exists():
-        raise HTTPException(status_code=404, detail=f"Image file not found: {body.image_filename}")
-
-    # Check cache
-    cache_dir = Path("data/journey_cache")
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    image_hash = hashlib.md5(image_path.read_bytes()).hexdigest()
-    cache_key = f"{image_hash}_s{housen_stage}_{housen_substage}"
-    cache_file = cache_dir / f"{cache_key}.json"
-
-    if cache_file.exists():
-        journey_data = json.loads(cache_file.read_text())
-    else:
-        # Build Claude prompt (simplified version of the slow_looking_engine)
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise HTTPException(status_code=500, detail="Anthropic API key not configured")
-
-        client = Anthropic(api_key=api_key)
-
-        suffix = image_path.suffix.lower()
-        media_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".gif": "image/gif"}
-        media_type = media_map.get(suffix, "image/jpeg")
-        image_b64 = base64.standard_b64encode(image_path.read_bytes()).decode()
-
-        system_prompt = (
-            "You are an art educator creating a personalized slow-looking journey. "
-            f"The user is at Housen Stage {housen_stage}.{housen_substage}. "
-            "Return ONLY valid JSON matching the journey schema."
-        )
-
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=8192,
-            temperature=0.7,
-            system=system_prompt,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_b64}},
-                        {"type": "text", "text": "Create a slow-looking journey for this artwork. Return valid JSON with keys: journey_id, artwork, total_steps, estimated_duration_minutes, steps, welcome_text, final_summary, confidence_score, pedagogical_approach."},
-                    ],
-                }
-            ],
-        )
-
-        raw = response.content[0].text
-        if "```json" in raw:
-            raw = raw.split("```json")[1].split("```")[0]
-        elif "```" in raw:
-            raw = raw.split("```")[1].split("```")[0]
-
-        journey_data = json.loads(raw.strip())
-        journey_data["image_filename"] = body.image_filename
-        journey_data["created_at"] = datetime.utcnow().isoformat()
-        journey_data["housen_stage"] = housen_stage
-        journey_data["housen_substage"] = housen_substage
-        journey_data["at_museum"] = body.at_museum
-
-        cache_file.write_text(json.dumps(journey_data, indent=2))
-
-    # Ensure a journey_id exists
-    if "journey_id" not in journey_data or not journey_data["journey_id"]:
-        journey_data["journey_id"] = str(uuid.uuid4())
-
-    # Persist to Supabase
-    db_row = {
-        "id": journey_data["journey_id"],
-        "user_id": user["id"],
-        "artwork_title": journey_data.get("artwork", {}).get("title"),
-        "artwork_artist": journey_data.get("artwork", {}).get("artist"),
-        "image_filename": body.image_filename,
-        "total_steps": journey_data.get("total_steps", 0),
-        "estimated_duration_minutes": journey_data.get("estimated_duration_minutes", 0),
-        "housen_stage": housen_stage,
-        "housen_substage": housen_substage,
-        "at_museum": body.at_museum,
-        "journey_data": json.dumps(journey_data),
-        "created_at": journey_data.get("created_at", datetime.utcnow().isoformat()),
-    }
-    db.table("journeys").upsert(db_row).execute()
-
-    return journey_data
-
-
-@router.get("", response_model=list[JourneyListItem])
-async def list_journeys(
-    user: dict = Depends(_get_current_user),
-    db: Client = Depends(get_supabase),
-):
-    """Return all journeys for the authenticated user, newest first."""
-    result = (
-        db.table("journeys")
-        .select("*")
-        .eq("user_id", user["id"])
-        .order("created_at", desc=True)
-        .execute()
-    )
-
-    items: list[JourneyListItem] = []
-    for row in result.data or []:
-        items.append(
-            JourneyListItem(
-                journey_id=row["id"],
-                artwork={
-                    "title": row.get("artwork_title"),
-                    "artist": row.get("artwork_artist"),
-                },
-                total_steps=row.get("total_steps", 0),
-                estimated_duration_minutes=row.get("estimated_duration_minutes", 0),
-                housen_stage=row.get("housen_stage", 1),
-                completed_at=row.get("completed_at"),
-                image_filename=row.get("image_filename"),
+    try:
+        # Verify user
+        user_data = get_user_from_token(authorization)
+        user_id = user_data["id"]
+        
+        # Get user's current Housen stage for personalization
+        profile_response = db.table("user_profiles").select(
+            "housen_stage, housen_substage"
+        ).eq("id", user_id).execute()
+        
+        if not profile_response.data:
+            raise HTTPException(status_code=404, detail="User profile not found")
+        
+        profile = profile_response.data[0]
+        housen_stage = profile.get("housen_stage", 1)
+        housen_substage = profile.get("housen_substage", 1)
+        
+        # For MVP: Create a simple journey structure
+        # Later: This will be AI-generated based on artwork and user stage
+        
+        journey_data = {
+            "user_id": user_id,
+            "image_filename": request.image_filename,
+            "at_museum": request.at_museum,
+            "housen_stage": housen_stage,
+            "housen_substage": housen_substage,
+            "total_steps": 4,  # Simple 4-step journey for MVP
+            "estimated_duration_minutes": 5,
+            "completed": False
+        }
+        
+        # Insert journey
+        journey_response = db.table("journeys").insert(journey_data).execute()
+        
+        if not journey_response.data:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to create journey"
             )
+        
+        journey = journey_response.data[0]
+        journey_id = journey["id"]
+        
+        # Return journey response
+        # For MVP, we'll return a simple structure
+        # Later, this will include AI-generated steps and prompts
+        
+        return JourneyResponse(
+            journey_id=journey_id,
+            artwork=ArtworkInfo(
+                title="Untitled",
+                artist="Unknown",
+                year=None,
+                period=None,
+                style=None
+            ),
+            total_steps=4,
+            estimated_duration_minutes=5,
+            steps=[],  # Will be populated by AI generator later
+            welcome_text="Take your time observing this artwork. Let your eyes wander naturally.",
+            final_summary={
+                "main_takeaway": "You've completed your observation journey.",
+                "connections": "Notice what stood out to you most.",
+                "invitation_to_return": "Come back and see what new details you discover.",
+                "reflection_question": "What did you notice that surprised you?"
+            },
+            housen_stage=housen_stage,
+            housen_substage=housen_substage,
+            at_museum=request.at_museum,
+            image_filename=request.image_filename,
+            created_at=journey.get("created_at")
         )
-    return items
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create journey: {str(e)}"
+        )
+
+
+@router.get("/", response_model=List[JourneyListItem])
+async def list_journeys(
+    completed: Optional[bool] = None,
+    limit: int = 20,
+    authorization: str = Header(...),
+    db: Client = Depends(get_supabase)
+):
+    """
+    Get all journeys for the current user.
+    
+    Headers:
+    - Authorization: Bearer {access_token}
+    
+    Query Parameters:
+    - completed: Filter by completion status (optional)
+    - limit: Maximum number of journeys to return (default 20)
+    
+    Returns:
+    - List of journey summaries
+    """
+    try:
+        # Verify user
+        user_data = get_user_from_token(authorization)
+        user_id = user_data["id"]
+        
+        # Build query
+        query = db.table("journeys").select("*").eq("user_id", user_id)
+        
+        # Apply filters
+        if completed is not None:
+            query = query.eq("completed", completed)
+        
+        # Execute query
+        response = query.order("created_at", desc=True).limit(limit).execute()
+        
+        if not response.data:
+            return []
+        
+        # Transform to list items
+        journeys = []
+        for journey in response.data:
+            journeys.append(JourneyListItem(
+                journey_id=journey["id"],
+                artwork=ArtworkInfo(
+                    title="Untitled",  # Will be populated from artwork data later
+                    artist="Unknown",
+                    year=None,
+                    period=None,
+                    style=None
+                ),
+                total_steps=journey.get("total_steps", 4),
+                estimated_duration_minutes=journey.get("estimated_duration_minutes", 5),
+                housen_stage=journey.get("housen_stage", 1),
+                completed_at=journey.get("completed_at"),
+                image_filename=journey.get("image_filename")
+            ))
+        
+        return journeys
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to list journeys: {str(e)}"
+        )
 
 
 @router.get("/{journey_id}", response_model=JourneyResponse)
 async def get_journey(
     journey_id: str,
-    user: dict = Depends(_get_current_user),
-    db: Client = Depends(get_supabase),
+    authorization: str = Header(...),
+    db: Client = Depends(get_supabase)
 ):
-    """Retrieve a single journey with full step data."""
-    result = db.table("journeys").select("*").eq("id", journey_id).eq("user_id", user["id"]).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Journey not found")
-
-    row = result.data[0]
-    journey_data = json.loads(row.get("journey_data", "{}"))
-    journey_data["journey_id"] = row["id"]
-    journey_data["completed_at"] = row.get("completed_at")
-    return journey_data
+    """
+    Get a specific journey by ID.
+    
+    Headers:
+    - Authorization: Bearer {access_token}
+    
+    Path Parameters:
+    - journey_id: UUID of the journey
+    
+    Returns:
+    - Complete journey details
+    """
+    try:
+        # Verify user
+        user_data = get_user_from_token(authorization)
+        user_id = user_data["id"]
+        
+        # Get journey
+        response = db.table("journeys").select("*").eq(
+            "id", journey_id
+        ).eq("user_id", user_id).execute()
+        
+        if not response.data:
+            raise HTTPException(
+                status_code=404,
+                detail="Journey not found"
+            )
+        
+        journey = response.data[0]
+        
+        # Return journey response
+        return JourneyResponse(
+            journey_id=journey["id"],
+            artwork=ArtworkInfo(
+                title="Untitled",
+                artist="Unknown",
+                year=None,
+                period=None,
+                style=None
+            ),
+            total_steps=journey.get("total_steps", 4),
+            estimated_duration_minutes=journey.get("estimated_duration_minutes", 5),
+            steps=[],  # Will be populated later
+            welcome_text="Take your time observing this artwork.",
+            final_summary={
+                "main_takeaway": "You've completed your observation journey.",
+                "connections": "Notice what stood out to you most.",
+                "invitation_to_return": "Come back and see what new details you discover.",
+                "reflection_question": "What did you notice that surprised you?"
+            },
+            housen_stage=journey.get("housen_stage", 1),
+            housen_substage=journey.get("housen_substage", 1),
+            at_museum=journey.get("at_museum", False),
+            image_filename=journey.get("image_filename"),
+            created_at=journey.get("created_at"),
+            completed_at=journey.get("completed_at")
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get journey: {str(e)}"
+        )
 
 
 @router.post("/{journey_id}/complete")
 async def complete_journey(
     journey_id: str,
-    body: JourneyCompleteRequest,
-    user: dict = Depends(_get_current_user),
-    db: Client = Depends(get_supabase),
+    request: JourneyCompleteRequest,
+    authorization: str = Header(...),
+    db: Client = Depends(get_supabase)
 ):
-    """Mark a journey as completed and update user stats."""
-    now = datetime.utcnow().isoformat()
-
-    # Mark journey completed
-    db.table("journeys").update({
-        "completed_at": now,
-        "completion_time_seconds": body.completion_time_seconds,
-        "steps_viewed": body.steps_viewed,
-    }).eq("id", journey_id).eq("user_id", user["id"]).execute()
-
-    # Update user profile stats
-    profile_result = db.table("user_profiles").select("*").eq("id", user["id"]).execute()
-    if profile_result.data:
-        p = profile_result.data[0]
+    """
+    Mark a journey as completed.
+    
+    This is called when the user finishes walking through all steps.
+    
+    Headers:
+    - Authorization: Bearer {access_token}
+    
+    Path Parameters:
+    - journey_id: UUID of the journey
+    
+    Request Body:
+    - completion_time_seconds: How long the journey took
+    - steps_viewed: Number of steps the user viewed
+    
+    Returns:
+    - Success message
+    """
+    try:
+        # Verify user
+        user_data = get_user_from_token(authorization)
+        user_id = user_data["id"]
+        
+        # Verify journey exists and belongs to user
+        journey_response = db.table("journeys").select("*").eq(
+            "id", journey_id
+        ).eq("user_id", user_id).execute()
+        
+        if not journey_response.data:
+            raise HTTPException(
+                status_code=404,
+                detail="Journey not found"
+            )
+        
+        journey = journey_response.data[0]
+        
+        if journey.get("completed"):
+            raise HTTPException(
+                status_code=400,
+                detail="Journey already completed"
+            )
+        
+        # Update journey as completed
+        update_data = {
+            "completed": True,
+            "completed_at": datetime.utcnow().isoformat(),
+            "completion_time_seconds": request.completion_time_seconds
+        }
+        
+        db.table("journeys").update(update_data).eq("id", journey_id).execute()
+        
+        # Update user's journey count
         db.table("user_profiles").update({
-            "journeys_completed": p.get("journeys_completed", 0) + 1,
-            "total_time_seconds": p.get("total_time_seconds", 0) + body.completion_time_seconds,
-            "last_activity": now,
-        }).eq("id", user["id"]).execute()
-
-    return {"success": True, "completed_at": now}
+            "journeys_completed": db.table("user_profiles").select(
+                "journeys_completed"
+            ).eq("id", user_id).execute().data[0]["journeys_completed"] + 1
+        }).eq("id", user_id).execute()
+        
+        return {
+            "success": True,
+            "message": "Journey completed successfully",
+            "journey_id": journey_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to complete journey: {str(e)}"
+        )

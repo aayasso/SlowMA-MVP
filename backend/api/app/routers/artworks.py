@@ -1,145 +1,300 @@
 """
 SlowMA Artworks Router
-Image upload, seed artworks, and artwork metadata.
+Handles all artwork-related endpoints for the SlowMA API.
 """
 
-import os
-import shutil
-import uuid
-from pathlib import Path
+from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional
+import random
+from app.database import get_supabase, Client
+from app.models.schemas import ArtworkInfo
 
-from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile, status
-from supabase import Client
-
-from app.database import get_supabase, verify_token
-from app.models.schemas import ArtworkInfo, ArtworkUploadResponse
-
-router = APIRouter(prefix="/artworks", tags=["artworks"])
-
-UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_SIZE_MB", "10")) * 1024 * 1024
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+router = APIRouter(prefix="/api/artworks", tags=["Artworks"])
 
 
-def _get_current_user(authorization: str = Header(...)) -> dict:
-    token = authorization.replace("Bearer ", "")
-    user = verify_token(token)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
-    return user
+# ============================================================
+# Helper Functions
+# ============================================================
+
+def build_artwork_response(artwork_row: dict) -> dict:
+    """
+    Transform a database row into a clean API response.
+    Includes the public URL for the artwork image.
+    """
+    db = get_supabase()
+    
+    # Get public URL for the image
+    image_url = None
+    if artwork_row.get("image_filename"):
+        try:
+            # Supabase storage public URL format
+            image_url = db.storage.from_("artworks").get_public_url(
+                artwork_row["image_filename"]
+            )
+        except Exception as e:
+            print(f"Warning: Could not generate image URL: {e}")
+    
+    return {
+        "id": artwork_row["id"],
+        "title": artwork_row.get("title"),
+        "artist": artwork_row.get("artist"),
+        "year": artwork_row.get("year"),
+        "period": artwork_row.get("period"),
+        "style": artwork_row.get("style"),
+        "image_filename": artwork_row.get("image_filename"),
+        "image_url": image_url,
+        "is_seed_artwork": artwork_row.get("is_seed_artwork", False),
+        "created_at": artwork_row.get("created_at"),
+    }
 
 
-# ---------------------------------------------------------------------------
-# Seed artworks — available to all new users
-# ---------------------------------------------------------------------------
-
-SEED_ARTWORKS: list[dict] = [
-    {
-        "title": "Woman with Red Hair",
-        "artist": "Amadeo Modigliani",
-        "year": "1917",
-        "period": "Early 20th Century",
-        "style": "Expressionism",
-        "image_filename": "seed_modigliani.jpg",
-    },
-    {
-        "title": "Skeleton with a Burning Cigarette",
-        "artist": "Vincent van Gogh",
-        "year": "1886",
-        "period": "Post-Impressionism",
-        "style": "Post-Impressionism",
-        "image_filename": "seed_vangogh.jpg",
-    },
-    {
-        "title": "The Beheading of Saint John the Baptist",
-        "artist": "Caravaggio",
-        "year": "1608",
-        "period": "Baroque",
-        "style": "Baroque",
-        "image_filename": "seed_caravaggio.jpg",
-    },
-    {
-        "title": "Meditative Rose",
-        "artist": "Salvador Dali",
-        "year": "1958",
-        "period": "Surrealism",
-        "style": "Surrealism",
-        "image_filename": "seed_dali.jpg",
-    },
-]
-
-
-# ---------------------------------------------------------------------------
+# ============================================================
 # Endpoints
-# ---------------------------------------------------------------------------
+# ============================================================
 
-@router.post("/upload", response_model=ArtworkUploadResponse)
-async def upload_artwork(
-    file: UploadFile = File(...),
-    user: dict = Depends(_get_current_user),
+@router.get("/")
+async def get_all_artworks(
+    is_seed_artwork: Optional[bool] = None,
+    limit: int = 100,
+    db: Client = Depends(get_supabase)
 ):
     """
-    Upload an artwork image for analysis.
-    Returns the saved filename which can be passed to POST /journeys.
+    Get all artworks from the database.
+    
+    Query Parameters:
+    - is_seed_artwork: Filter by seed artworks (True) or user-uploaded (False)
+    - limit: Maximum number of artworks to return (default 100)
+    
+    Returns:
+    - List of artwork objects with image URLs
     """
-    # Validate extension
-    ext = Path(file.filename or "").suffix.lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        return ArtworkUploadResponse(
-            success=False,
-            error=f"Unsupported file type '{ext}'. Allowed: {', '.join(ALLOWED_EXTENSIONS)}",
+    try:
+        query = db.table("artworks").select("*")
+        
+        # Apply filters
+        if is_seed_artwork is not None:
+            query = query.eq("is_seed_artwork", is_seed_artwork)
+        
+        # Execute query
+        response = query.limit(limit).execute()
+        
+        if not response.data:
+            return {
+                "success": True,
+                "count": 0,
+                "artworks": []
+            }
+        
+        # Transform all rows to include image URLs
+        artworks = [build_artwork_response(row) for row in response.data]
+        
+        return {
+            "success": True,
+            "count": len(artworks),
+            "artworks": artworks
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch artworks: {str(e)}"
         )
 
-    # Read and validate size
-    contents = await file.read()
-    if len(contents) > MAX_UPLOAD_BYTES:
-        return ArtworkUploadResponse(
-            success=False,
-            error=f"File too large. Maximum size is {MAX_UPLOAD_BYTES // (1024*1024)} MB.",
+
+@router.get("/seeds")
+async def get_seed_artworks(db: Client = Depends(get_supabase)):
+    """
+    Get only the seed artworks (the 4 starter artworks).
+    
+    These are the artworks that:
+    1. Every user sees when they first open the app
+    2. Disappear after completion to reveal the constellation
+    
+    Returns:
+    - List of 4 seed artwork objects
+    """
+    try:
+        response = db.table("artworks").select("*").eq("is_seed_artwork", True).execute()
+        
+        if not response.data:
+            raise HTTPException(
+                status_code=404,
+                detail="No seed artworks found. Database may not be initialized."
+            )
+        
+        artworks = [build_artwork_response(row) for row in response.data]
+        
+        return {
+            "success": True,
+            "count": len(artworks),
+            "artworks": artworks
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch seed artworks: {str(e)}"
         )
 
-    # Save with a unique name
-    unique_name = f"{user['id']}_{uuid.uuid4().hex[:8]}{ext}"
-    save_path = UPLOAD_DIR / unique_name
-    save_path.write_bytes(contents)
 
-    return ArtworkUploadResponse(
-        success=True,
-        filename=unique_name,
-        image_url=f"/uploads/{unique_name}",
-    )
-
-
-@router.get("/seeds", response_model=list[ArtworkInfo])
-async def get_seed_artworks():
-    """Return the curated seed artworks available for new users."""
-    return [
-        ArtworkInfo(
-            title=s["title"],
-            artist=s["artist"],
-            year=s["year"],
-            period=s["period"],
-            style=s["style"],
-        )
-        for s in SEED_ARTWORKS
-    ]
-
-
-@router.delete("/{filename}")
-async def delete_artwork(
-    filename: str,
-    user: dict = Depends(_get_current_user),
+@router.get("/random")
+async def get_random_artwork(
+    is_seed_artwork: bool = True,
+    db: Client = Depends(get_supabase)
 ):
-    """Delete an uploaded artwork image (only if owned by the user)."""
-    # Simple ownership check: filename starts with user id
-    if not filename.startswith(user["id"]):
-        raise HTTPException(status_code=403, detail="You can only delete your own uploads")
+    """
+    Get a random artwork from the database.
+    
+    Query Parameters:
+    - is_seed_artwork: Get random seed artwork (True) or random user artwork (False)
+    
+    Use Case:
+    - When user taps "Start Journey" on home screen
+    - Returns one random seed artwork for them to observe
+    
+    Returns:
+    - Single artwork object
+    """
+    try:
+        response = db.table("artworks").select("*").eq("is_seed_artwork", is_seed_artwork).execute()
+        
+        if not response.data:
+            raise HTTPException(
+                status_code=404,
+                detail="No artworks available"
+            )
+        
+        # Pick a random artwork from the results
+        random_artwork = random.choice(response.data)
+        artwork = build_artwork_response(random_artwork)
+        
+        return {
+            "success": True,
+            "artwork": artwork
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch random artwork: {str(e)}"
+        )
 
-    file_path = UPLOAD_DIR / filename
-    if file_path.exists():
-        file_path.unlink()
-        return {"success": True, "message": "File deleted"}
 
-    raise HTTPException(status_code=404, detail="File not found")
+@router.get("/{artwork_id}")
+async def get_artwork_by_id(
+    artwork_id: str,
+    db: Client = Depends(get_supabase)
+):
+    """
+    Get a specific artwork by its ID.
+    
+    Path Parameters:
+    - artwork_id: UUID of the artwork
+    
+    Returns:
+    - Single artwork object with full details
+    """
+    try:
+        response = db.table("artworks").select("*").eq("id", artwork_id).execute()
+        
+        if not response.data:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Artwork with id '{artwork_id}' not found"
+            )
+        
+        artwork = build_artwork_response(response.data[0])
+        
+        return {
+            "success": True,
+            "artwork": artwork
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch artwork: {str(e)}"
+        )
+
+
+@router.get("/{artwork_id}/info")
+async def get_artwork_info(
+    artwork_id: str,
+    db: Client = Depends(get_supabase)
+):
+    """
+    Get just the basic info about an artwork (no image URL).
+    
+    This is useful for lightweight requests where you only need
+    title/artist/year without loading the full image.
+    
+    Returns:
+    - ArtworkInfo schema (title, artist, year, period, style)
+    """
+    try:
+        response = db.table("artworks").select(
+            "title, artist, year, period, style"
+        ).eq("id", artwork_id).execute()
+        
+        if not response.data:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Artwork with id '{artwork_id}' not found"
+            )
+        
+        return {
+            "success": True,
+            "artwork_info": response.data[0]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch artwork info: {str(e)}"
+        )
+
+
+@router.get("/user/{user_id}")
+async def get_user_artworks(
+    user_id: str,
+    limit: int = 50,
+    db: Client = Depends(get_supabase)
+):
+    """
+    Get all artworks uploaded by a specific user.
+    
+    Path Parameters:
+    - user_id: UUID of the user
+    
+    Query Parameters:
+    - limit: Maximum number of artworks to return (default 50)
+    
+    Returns:
+    - List of artwork objects uploaded by this user
+    """
+    try:
+        response = db.table("artworks").select("*").eq(
+            "uploaded_by", user_id
+        ).eq("is_seed_artwork", False).limit(limit).execute()
+        
+        artworks = [build_artwork_response(row) for row in response.data] if response.data else []
+        
+        return {
+            "success": True,
+            "count": len(artworks),
+            "artworks": artworks
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch user artworks: {str(e)}"
+        )

@@ -1,210 +1,400 @@
 """
 SlowMA Users Router
-Authentication, profile management, and user statistics.
+Handles user authentication and profile management.
 """
 
-from datetime import datetime
-
-from fastapi import APIRouter, Depends, Header, HTTPException, status
-from supabase import Client
-
-from app.database import get_supabase, verify_token
+from fastapi import APIRouter, HTTPException, Depends, Header
+from typing import Optional
+from app.database import get_supabase, verify_token, Client
 from app.models.schemas import (
-    AuthResponse,
-    MagicLinkRequest,
-    PasswordResetRequest,
-    PasswordUpdateRequest,
-    SignInRequest,
     SignUpRequest,
+    SignInRequest,
+    AuthResponse,
     UserProfileResponse,
     UserProfileUpdate,
-    UserStatsResponse,
+    UserStatsResponse
 )
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/api/users", tags=["Users"])
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _get_current_user(authorization: str = Header(...)) -> dict:
-    """Extract and verify the user from the Authorization header."""
-    token = authorization.replace("Bearer ", "")
-    user = verify_token(token)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
-    return user
-
-
-STAGE_NAMES = {1: "Accountive", 2: "Constructive", 3: "Classifying", 4: "Interpretive", 5: "Re-creative"}
-SUBSTAGE_NAMES = {1: "Early", 2: "Developing", 3: "Advanced"}
-
-
-# ---------------------------------------------------------------------------
-# Auth endpoints
-# ---------------------------------------------------------------------------
+# ============================================================
+# Authentication Endpoints
+# ============================================================
 
 @router.post("/signup", response_model=AuthResponse)
-async def sign_up(body: SignUpRequest, db: Client = Depends(get_supabase)):
-    """Register a new user with email & password."""
+async def signup(request: SignUpRequest, db: Client = Depends(get_supabase)):
+    """
+    Create a new user account.
+    
+    Request Body:
+    - email: User's email address
+    - password: Password (minimum 6 characters)
+    - username: Optional display name
+    
+    Returns:
+    - AuthResponse with access_token and user_id
+    """
     try:
-        auth_response = db.auth.sign_up({"email": body.email, "password": body.password})
-
+        # Create user with Supabase Auth
+        auth_response = db.auth.sign_up({
+            "email": request.email,
+            "password": request.password,
+        })
+        
         if not auth_response.user:
-            return AuthResponse(success=False, error="Failed to create account")
-
-# Create the user_profiles row
-        profile = {
-            "id": auth_response.user.id,
-            "email": body.email,
-            "display_name": body.display_name,
+            raise HTTPException(
+                status_code=400,
+                detail="Failed to create user account"
+            )
+        
+        user_id = auth_response.user.id
+        
+        # Create user profile in database
+        profile_data = {
+            "id": user_id,
+            "email": request.email,
+            "username": request.username or request.email.split("@")[0],
             "housen_stage": 1,
             "housen_substage": 1,
-            "total_journeys": 0,
             "is_teacher": False,
+            "journeys_completed": 0
         }
-        db.table("user_profiles").insert(profile).execute()
-
-        session = auth_response.session
+        
+        db.table("user_profiles").insert(profile_data).execute()
+        
         return AuthResponse(
             success=True,
-            message="Account created successfully!",
-            access_token=session.access_token if session else None,
-            refresh_token=session.refresh_token if session else None,
-            user_id=auth_response.user.id,
+            message="Account created successfully",
+            access_token=auth_response.session.access_token if auth_response.session else None,
+            refresh_token=auth_response.session.refresh_token if auth_response.session else None,
+            user_id=user_id
         )
-    except Exception as exc:
-        msg = str(exc)
-        if "already registered" in msg.lower():
-            msg = "This email is already registered. Try signing in instead."
-        return AuthResponse(success=False, error=msg)
+        
+    except Exception as e:
+        error_message = str(e)
+        
+        # Handle duplicate email
+        if "already registered" in error_message.lower() or "duplicate" in error_message.lower():
+            raise HTTPException(
+                status_code=400,
+                detail="An account with this email already exists"
+            )
+        
+        raise HTTPException(
+            status_code=500,
+            detail=f"Signup failed: {error_message}"
+        )
 
 
 @router.post("/signin", response_model=AuthResponse)
-async def sign_in(body: SignInRequest, db: Client = Depends(get_supabase)):
-    """Sign in with email & password."""
+async def signin(request: SignInRequest, db: Client = Depends(get_supabase)):
+    """
+    Sign in to an existing account.
+    
+    Request Body:
+    - email: User's email address
+    - password: User's password
+    
+    Returns:
+    - AuthResponse with access_token and user_id
+    """
     try:
-        auth_response = db.auth.sign_in_with_password({"email": body.email, "password": body.password})
-        if not auth_response.user:
-            return AuthResponse(success=False, error="Invalid email or password")
-
-        session = auth_response.session
+        # Sign in with Supabase Auth
+        auth_response = db.auth.sign_in_with_password({
+            "email": request.email,
+            "password": request.password
+        })
+        
+        if not auth_response.user or not auth_response.session:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid email or password"
+            )
+        
         return AuthResponse(
             success=True,
-            access_token=session.access_token if session else None,
-            refresh_token=session.refresh_token if session else None,
-            user_id=auth_response.user.id,
+            message="Signed in successfully",
+            access_token=auth_response.session.access_token,
+            refresh_token=auth_response.session.refresh_token,
+            user_id=auth_response.user.id
         )
-    except Exception as exc:
-        msg = str(exc)
-        if "invalid" in msg.lower() or "credentials" in msg.lower():
-            msg = "Invalid email or password"
-        return AuthResponse(success=False, error=msg)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_message = str(e)
+        
+        # Handle invalid credentials
+        if "invalid" in error_message.lower() or "credentials" in error_message.lower():
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid email or password"
+            )
+        
+        raise HTTPException(
+            status_code=500,
+            detail=f"Sign in failed: {error_message}"
+        )
 
 
-@router.post("/magic-link", response_model=AuthResponse)
-async def magic_link(body: MagicLinkRequest, db: Client = Depends(get_supabase)):
-    """Send a passwordless magic-link email."""
+@router.post("/signout")
+async def signout(
+    authorization: Optional[str] = Header(None),
+    db: Client = Depends(get_supabase)
+):
+    """
+    Sign out the current user.
+    
+    Headers:
+    - Authorization: Bearer {access_token}
+    
+    Returns:
+    - Success message
+    """
     try:
-        db.auth.sign_in_with_otp({"email": body.email})
-        return AuthResponse(success=True, message="Magic link sent! Check your email.")
-    except Exception as exc:
-        return AuthResponse(success=False, error=str(exc))
-
-
-@router.post("/signout", response_model=AuthResponse)
-async def sign_out(db: Client = Depends(get_supabase)):
-    """Sign out the current session."""
-    try:
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(
+                status_code=401,
+                detail="No authorization token provided"
+            )
+        
+        access_token = authorization.replace("Bearer ", "")
+        
+        # Sign out with Supabase
         db.auth.sign_out()
-        return AuthResponse(success=True, message="Signed out successfully")
-    except Exception as exc:
-        return AuthResponse(success=False, error=str(exc))
+        
+        return {
+            "success": True,
+            "message": "Signed out successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Sign out failed: {str(e)}"
+        )
 
 
-@router.post("/password-reset", response_model=AuthResponse)
-async def password_reset(body: PasswordResetRequest, db: Client = Depends(get_supabase)):
-    """Send a password reset email."""
-    try:
-        db.auth.reset_password_email(body.email)
-        return AuthResponse(success=True, message="Password reset email sent")
-    except Exception as exc:
-        return AuthResponse(success=False, error=str(exc))
-
-
-@router.post("/password-update", response_model=AuthResponse)
-async def password_update(body: PasswordUpdateRequest, db: Client = Depends(get_supabase)):
-    """Update the current user's password (requires valid session)."""
-    try:
-        db.auth.update_user({"password": body.new_password})
-        return AuthResponse(success=True, message="Password updated successfully")
-    except Exception as exc:
-        return AuthResponse(success=False, error=str(exc))
-
-
-# ---------------------------------------------------------------------------
-# Profile endpoints
-# ---------------------------------------------------------------------------
+# ============================================================
+# Profile Endpoints
+# ============================================================
 
 @router.get("/me", response_model=UserProfileResponse)
-async def get_my_profile(
-    user: dict = Depends(_get_current_user),
-    db: Client = Depends(get_supabase),
+async def get_current_user(
+    authorization: str = Header(...),
+    db: Client = Depends(get_supabase)
 ):
-    """Return the authenticated user's profile."""
-    result = db.table("user_profiles").select("*").eq("id", user["id"]).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    return result.data[0]
+    """
+    Get the current user's profile.
+    
+    Headers:
+    - Authorization: Bearer {access_token}
+    
+    Returns:
+    - Full user profile with stats
+    """
+    try:
+        # Extract token
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid authorization header"
+            )
+        
+        access_token = authorization.replace("Bearer ", "")
+        
+        # Verify token and get user
+        user_data = verify_token(access_token)
+        if not user_data:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or expired token"
+            )
+        
+        user_id = user_data["id"]
+        
+        # Get profile from database
+        response = db.table("user_profiles").select("*").eq("id", user_id).execute()
+        
+        if not response.data:
+            raise HTTPException(
+                status_code=404,
+                detail="User profile not found"
+            )
+        
+        profile = response.data[0]
+        
+        return UserProfileResponse(
+            id=profile["id"],
+            email=profile["email"],
+            username=profile.get("username"),
+            is_teacher=profile.get("is_teacher", False),
+            housen_stage=profile.get("housen_stage", 1),
+            housen_substage=profile.get("housen_substage", 1),
+            journeys_completed=profile.get("journeys_completed", 0),
+            created_at=profile.get("created_at", ""),
+            updated_at=profile.get("updated_at", "")
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get profile: {str(e)}"
+        )
 
 
 @router.patch("/me", response_model=UserProfileResponse)
-async def update_my_profile(
+async def update_profile(
     updates: UserProfileUpdate,
-    user: dict = Depends(_get_current_user),
-    db: Client = Depends(get_supabase),
+    authorization: str = Header(...),
+    db: Client = Depends(get_supabase)
 ):
-    """Update editable profile fields."""
-    data = updates.model_dump(exclude_none=True)
-    if not data:
-        raise HTTPException(status_code=400, detail="No fields to update")
+    """
+    Update the current user's profile.
+    
+    Headers:
+    - Authorization: Bearer {access_token}
+    
+    Request Body:
+    - username: New display name (optional)
+    
+    Returns:
+    - Updated user profile
+    """
+    try:
+        # Extract and verify token
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid authorization header"
+            )
+        
+        access_token = authorization.replace("Bearer ", "")
+        user_data = verify_token(access_token)
+        
+        if not user_data:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or expired token"
+            )
+        
+        user_id = user_data["id"]
+        
+        # Build update data
+        update_data = {}
+        if updates.username is not None:
+            update_data["username"] = updates.username
+        
+        if not update_data:
+            raise HTTPException(
+                status_code=400,
+                detail="No fields to update"
+            )
+        
+        # Update profile
+        response = db.table("user_profiles").update(
+            update_data
+        ).eq("id", user_id).execute()
+        
+        if not response.data:
+            raise HTTPException(
+                status_code=404,
+                detail="User profile not found"
+            )
+        
+        profile = response.data[0]
+        
+        return UserProfileResponse(
+            id=profile["id"],
+            email=profile["email"],
+            username=profile.get("username"),
+            is_teacher=profile.get("is_teacher", False),
+            housen_stage=profile.get("housen_stage", 1),
+            housen_substage=profile.get("housen_substage", 1),
+            journeys_completed=profile.get("journeys_completed", 0),
+            created_at=profile.get("created_at", ""),
+            updated_at=profile.get("updated_at", "")
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update profile: {str(e)}"
+        )
 
-    db.table("user_profiles").update(data).eq("id", user["id"]).execute()
-    result = db.table("user_profiles").select("*").eq("id", user["id"]).execute()
-    return result.data[0]
 
-
-@router.get("/me/stats", response_model=UserStatsResponse)
-async def get_my_stats(
-    user: dict = Depends(_get_current_user),
-    db: Client = Depends(get_supabase),
+@router.get("/stats", response_model=UserStatsResponse)
+async def get_user_stats(
+    authorization: str = Header(...),
+    db: Client = Depends(get_supabase)
 ):
-    """Return aggregate statistics for the current user."""
-    profile_result = db.table("user_profiles").select("*").eq("id", user["id"]).execute()
-    if not profile_result.data:
-        raise HTTPException(status_code=404, detail="Profile not found")
-
-    p = profile_result.data[0]
-    stage = p.get("housen_stage", 1)
-    substage = p.get("housen_substage", 1)
-
-    return UserStatsResponse(
-        total_journeys=p.get("journeys_completed", 0),
-        total_minutes=p.get("total_time_seconds", 0) // 60,
-        museum_visits=p.get("museum_visits", 0),
-        current_stage=stage,
-        current_substage=substage,
-        stage_name=STAGE_NAMES.get(stage, "Unknown"),
-        substage_name=SUBSTAGE_NAMES.get(substage, "Unknown"),
-        current_streak=p.get("current_streak", 0),
-    )
-
-
-@router.get("/{user_id}", response_model=UserProfileResponse)
-async def get_user_profile(user_id: str, db: Client = Depends(get_supabase)):
-    """Public profile lookup (limited fields could be enforced via RLS)."""
-    result = db.table("user_profiles").select("*").eq("id", user_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="User not found")
-    return result.data[0]
+    """
+    Get the current user's learning statistics.
+    
+    Headers:
+    - Authorization: Bearer {access_token}
+    
+    Returns:
+    - User stats including journey count and Housen stage info
+    """
+    try:
+        # Verify token
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+        
+        access_token = authorization.replace("Bearer ", "")
+        user_data = verify_token(access_token)
+        
+        if not user_data:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        
+        user_id = user_data["id"]
+        
+        # Get profile
+        profile_response = db.table("user_profiles").select("*").eq("id", user_id).execute()
+        
+        if not profile_response.data:
+            raise HTTPException(status_code=404, detail="User profile not found")
+        
+        profile = profile_response.data[0]
+        
+        # Map stage numbers to names
+        stage_names = {
+            1: "Accountive",
+            2: "Constructive",
+            3: "Classifying",
+            4: "Interpretive",
+            5: "Re-creative"
+        }
+        
+        substage_names = {
+            1: "Early",
+            2: "Developing",
+            3: "Advanced"
+        }
+        
+        current_stage = profile.get("housen_stage", 1)
+        current_substage = profile.get("housen_substage", 1)
+        
+        return UserStatsResponse(
+            journeys_completed=profile.get("journeys_completed", 0),
+            current_stage=current_stage,
+            current_substage=current_substage,
+            stage_name=stage_names.get(current_stage, "Accountive"),
+            substage_name=substage_names.get(current_substage, "Early")
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get user stats: {str(e)}"
+        )
