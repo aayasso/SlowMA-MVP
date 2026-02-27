@@ -55,13 +55,6 @@ async def create_journey(
     """
     Create a new journey for an artwork.
     
-    This is called when:
-    - User taps "Start Journey" on a seed artwork
-    - User uploads their own photo of an artwork
-    
-    For MVP, we'll create a simple journey structure.
-    Later, this will call AI to generate personalized steps.
-    
     Headers:
     - Authorization: Bearer {access_token}
     
@@ -73,7 +66,6 @@ async def create_journey(
     - Complete journey with steps and prompts
     """
     try:
-        # Verify user
         user_data = get_user_from_token(authorization)
         user_id = user_data["id"]
         
@@ -89,21 +81,24 @@ async def create_journey(
         housen_stage = profile.get("housen_stage", 1)
         housen_substage = profile.get("housen_substage", 1)
         
-        # For MVP: Create a simple journey structure
-        # Later: This will be AI-generated based on artwork and user stage
-        
         journey_data = {
             "user_id": user_id,
             "image_filename": request.image_filename,
             "at_museum": request.at_museum,
-            "housen_stage": housen_stage,
-            "housen_substage": housen_substage,
-            "total_steps": 4,  # Simple 4-step journey for MVP
+            "housen_stage_at_time": housen_stage,
+            "housen_substage_at_time": housen_substage,
+            "total_steps": 4,
             "estimated_duration_minutes": 5,
-            "completed": False
+            "completed": False,
+            "steps": [],
+            "final_summary": {
+                "main_takeaway": "You've completed your observation journey.",
+                "connections": "Notice what stood out to you most.",
+                "invitation_to_return": "Come back and see what new details you discover.",
+                "reflection_question": "What did you notice that surprised you?"
+            }
         }
         
-        # Insert journey
         journey_response = db.table("journeys").insert(journey_data).execute()
         
         if not journey_response.data:
@@ -114,10 +109,6 @@ async def create_journey(
         
         journey = journey_response.data[0]
         journey_id = journey["id"]
-        
-        # Return journey response
-        # For MVP, we'll return a simple structure
-        # Later, this will include AI-generated steps and prompts
         
         return JourneyResponse(
             journey_id=journey_id,
@@ -130,7 +121,7 @@ async def create_journey(
             ),
             total_steps=4,
             estimated_duration_minutes=5,
-            steps=[],  # Will be populated by AI generator later
+            steps=[],
             welcome_text="Take your time observing this artwork. Let your eyes wander naturally.",
             final_summary={
                 "main_takeaway": "You've completed your observation journey.",
@@ -175,30 +166,25 @@ async def list_journeys(
     - List of journey summaries
     """
     try:
-        # Verify user
         user_data = get_user_from_token(authorization)
         user_id = user_data["id"]
         
-        # Build query
         query = db.table("journeys").select("*").eq("user_id", user_id)
         
-        # Apply filters
         if completed is not None:
             query = query.eq("completed", completed)
         
-        # Execute query
         response = query.order("created_at", desc=True).limit(limit).execute()
         
         if not response.data:
             return []
         
-        # Transform to list items
         journeys = []
         for journey in response.data:
             journeys.append(JourneyListItem(
                 journey_id=journey["id"],
                 artwork=ArtworkInfo(
-                    title="Untitled",  # Will be populated from artwork data later
+                    title="Untitled",
                     artist="Unknown",
                     year=None,
                     period=None,
@@ -206,7 +192,7 @@ async def list_journeys(
                 ),
                 total_steps=journey.get("total_steps", 4),
                 estimated_duration_minutes=journey.get("estimated_duration_minutes", 5),
-                housen_stage=journey.get("housen_stage", 1),
+                housen_stage=journey.get("housen_stage_at_time", 1),
                 completed_at=journey.get("completed_at"),
                 image_filename=journey.get("image_filename")
             ))
@@ -241,11 +227,9 @@ async def get_journey(
     - Complete journey details
     """
     try:
-        # Verify user
         user_data = get_user_from_token(authorization)
         user_id = user_data["id"]
         
-        # Get journey
         response = db.table("journeys").select("*").eq(
             "id", journey_id
         ).eq("user_id", user_id).execute()
@@ -258,7 +242,6 @@ async def get_journey(
         
         journey = response.data[0]
         
-        # Return journey response
         return JourneyResponse(
             journey_id=journey["id"],
             artwork=ArtworkInfo(
@@ -270,7 +253,7 @@ async def get_journey(
             ),
             total_steps=journey.get("total_steps", 4),
             estimated_duration_minutes=journey.get("estimated_duration_minutes", 5),
-            steps=[],  # Will be populated later
+            steps=[],
             welcome_text="Take your time observing this artwork.",
             final_summary={
                 "main_takeaway": "You've completed your observation journey.",
@@ -278,8 +261,8 @@ async def get_journey(
                 "invitation_to_return": "Come back and see what new details you discover.",
                 "reflection_question": "What did you notice that surprised you?"
             },
-            housen_stage=journey.get("housen_stage", 1),
-            housen_substage=journey.get("housen_substage", 1),
+            housen_stage=journey.get("housen_stage_at_time", 1),
+            housen_substage=journey.get("housen_substage_at_time", 1),
             at_museum=journey.get("at_museum", False),
             image_filename=journey.get("image_filename"),
             created_at=journey.get("created_at"),
@@ -305,27 +288,19 @@ async def complete_journey(
     """
     Mark a journey as completed.
     
-    This is called when the user finishes walking through all steps.
-    
     Headers:
     - Authorization: Bearer {access_token}
     
     Path Parameters:
     - journey_id: UUID of the journey
     
-    Request Body:
-    - completion_time_seconds: How long the journey took
-    - steps_viewed: Number of steps the user viewed
-    
     Returns:
     - Success message
     """
     try:
-        # Verify user
         user_data = get_user_from_token(authorization)
         user_id = user_data["id"]
         
-        # Verify journey exists and belongs to user
         journey_response = db.table("journeys").select("*").eq(
             "id", journey_id
         ).eq("user_id", user_id).execute()
@@ -344,20 +319,20 @@ async def complete_journey(
                 detail="Journey already completed"
             )
         
-        # Update journey as completed
         update_data = {
             "completed": True,
-            "completed_at": datetime.utcnow().isoformat(),
-            "completion_time_seconds": request.completion_time_seconds
+            "completed_at": datetime.utcnow().isoformat()
         }
         
         db.table("journeys").update(update_data).eq("id", journey_id).execute()
         
-        # Update user's journey count
+        # Increment user's completed journey count
+        current_count = db.table("user_profiles").select(
+            "journeys_completed"
+        ).eq("id", user_id).execute().data[0]["journeys_completed"]
+        
         db.table("user_profiles").update({
-            "journeys_completed": db.table("user_profiles").select(
-                "journeys_completed"
-            ).eq("id", user_id).execute().data[0]["journeys_completed"] + 1
+            "journeys_completed": current_count + 1
         }).eq("id", user_id).execute()
         
         return {

@@ -4,17 +4,16 @@ Supabase client initialization and helper utilities.
 """
 
 import os
-from functools import lru_cache
 from pathlib import Path
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
 env_path = Path(__file__).resolve().parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
+load_dotenv(dotenv_path=env_path, override=True)
 
 
 class SupabaseClient:
-    """Singleton wrapper around the Supabase Python client."""
+    """Singleton wrapper around the anon Supabase client (for auth operations)."""
 
     _instance: Client | None = None
 
@@ -25,8 +24,30 @@ class SupabaseClient:
             key = os.getenv("SUPABASE_ANON_KEY")
             if not url or not key:
                 raise RuntimeError(
-                    "SUPABASE_URL and SUPABASE_ANON_KEY must be set in environment variables. "
-                    "Copy .env.example to .env and fill in your Supabase project credentials."
+                    "SUPABASE_URL and SUPABASE_ANON_KEY must be set in environment variables."
+                )
+            cls._instance = create_client(url, key)
+        return cls._instance
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset the client (useful for testing)."""
+        cls._instance = None
+
+
+class SupabaseServiceClient:
+    """Singleton wrapper around the service role client (bypasses RLS for backend queries)."""
+
+    _instance: Client | None = None
+
+    @classmethod
+    def get_client(cls) -> Client:
+        if cls._instance is None:
+            url = os.getenv("SUPABASE_URL")
+            key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+            if not url or not key:
+                raise RuntimeError(
+                    "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment variables."
                 )
             cls._instance = create_client(url, key)
         return cls._instance
@@ -38,7 +59,12 @@ class SupabaseClient:
 
 
 def get_supabase() -> Client:
-    """FastAPI dependency — returns the shared Supabase client."""
+    """FastAPI dependency — returns the service role client for backend queries."""
+    return SupabaseServiceClient.get_client()
+
+
+def get_auth_client() -> Client:
+    """Returns the anon client — used only for auth operations (signup, signin)."""
     return SupabaseClient.get_client()
 
 
@@ -62,7 +88,7 @@ def verify_token(access_token: str) -> dict | None:
     Verify a Supabase JWT and return the user payload, or None if invalid.
     """
     try:
-        client = get_supabase()
+        client = SupabaseClient.get_client()
         user_response = client.auth.get_user(access_token)
         if user_response and user_response.user:
             return {
