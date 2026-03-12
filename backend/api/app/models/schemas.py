@@ -44,11 +44,16 @@ class ConceptTag(str, Enum):
 
 
 class ActivityType(str, Enum):
-    TEXT = "text"
-    COMPARISON = "comparison"
-    CONNECTION = "connection"
-    CREATIVE = "creative"
-    SYNTHESIS = "synthesis"
+    TEXT = "text"                        # Free text response
+    MULTIPLE_CHOICE = "multiple_choice"  # App generates prompt + options
+    FILL_BLANK = "fill_blank"            # Fill in the blank sentence
+    WORD_CLOUD = "word_cloud"            # Thumbs up/down word selection
+    SORTING = "sorting"                  # Drag to sort feelings/ideas
+    CLASSIFYING = "classifying"          # Drag words into categories
+    LISTING = "listing"                  # Quick list of associations
+    SKETCH = "sketch"                    # Finger sketch in small box
+    VOICE = "voice"                      # Speak answer out loud
+    CHAT = "chat"                        # User-initiated Q&A with app
 
 
 class ProgressionChange(str, Enum):
@@ -120,6 +125,8 @@ class UserProfileResponse(UserProfileBase):
     email: str
     is_teacher: bool = False
     journeys_completed: int = 0
+    grade_level: Optional[str] = None
+    school_id: Optional[str] = None
     created_at: str
     updated_at: str
 
@@ -233,6 +240,9 @@ class ReflectionActivity(BaseModel):
     prompt: str
     placeholder: Optional[str] = None
     why_this_activity: Optional[str] = None
+    # For structured activity types
+    options: Optional[list[str]] = None        # multiple_choice, word_cloud
+    categories: Optional[list[str]] = None     # classifying, sorting
 
 
 class ReflectionActivitiesResponse(BaseModel):
@@ -240,13 +250,42 @@ class ReflectionActivitiesResponse(BaseModel):
     activities: list[ReflectionActivity]
 
 
+class ActivityResponse(BaseModel):
+    """
+    Response data for a single completed activity.
+    One of these per activity the user completed.
+    """
+    activity_id: str
+    activity_type: ActivityType
+    response_text: Optional[str] = None        # for text, fill_blank, listing, chat
+    response_data: Optional[dict] = None       # for structured types (selections, sorting order, etc.)
+    response_modality: str = "text"            # 'text' | 'voice' | 'selection' | 'sketch'
+
+    # Behavioral timing signals
+    time_to_first_input_seconds: Optional[float] = None
+    total_time_seconds: Optional[float] = None
+    revision_count: int = 0
+
+    # Text analysis (computed before sending, or computed server-side)
+    word_count: Optional[int] = None
+    character_count: Optional[int] = None
+
+    # Voice-specific (only populated when response_modality == 'voice')
+    audio_duration_seconds: Optional[int] = None
+    audio_transcript: Optional[str] = None
+    audio_pause_count: Optional[int] = None
+
+
 class ReflectionSubmission(BaseModel):
     """
-    Maps activity_id -> user response text.
-    e.g. {"activity_1": "I noticed the warm colors...", "activity_2": "..."}
+    Submitted after the user completes all reflection activities.
+    Contains rich behavioral data for research-grade capture.
     """
     journey_id: str
-    responses: dict[str, str]
+    activities_presented: list[dict]           # [{id, type, title}] — exactly what was shown
+    responses: list[ActivityResponse]          # one entry per completed activity
+    session_started_at: Optional[str] = None   # ISO timestamp when activities screen opened
+    session_submitted_at: Optional[str] = None # ISO timestamp when user hit submit
 
 
 class AssessmentScores(BaseModel):
@@ -264,6 +303,8 @@ class ReflectionAssessmentResponse(BaseModel):
     feedback: str
     stage_name: str
     substage_name: str
+    indicators_demonstrated: Optional[list[str]] = None
+    assessment_confidence: Optional[float] = None
 
 
 # ============================================================
