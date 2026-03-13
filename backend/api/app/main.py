@@ -6,7 +6,7 @@ Main FastAPI application
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import users, journeys, reflections, artworks, assignments, social, teachers, sky_merging
+from app.routers import users, journeys, reflections, artworks, assignments, social, teachers, sky_merging, venues
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -33,6 +33,7 @@ app.include_router(assignments.router)
 app.include_router(social.router)
 app.include_router(teachers.router)
 app.include_router(sky_merging.router)
+app.include_router(venues.router)
 
 @app.get("/")
 async def root():
